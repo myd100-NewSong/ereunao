@@ -2,116 +2,342 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Ereunao - 개역개정 빠른 성경 검색</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Ereunao</title>
+    
+    <link rel="apple-touch-icon" sizes="180x180" href="icon.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon.png">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Ereunao">
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#090d16" media="(prefers-color-scheme: dark)">
+
     <style>
         :root {
             --bg: #f8fafc;
+            --surface: rgba(255, 255, 255, 0.85);
             --card-bg: #ffffff;
-            --text-main: #0f172a;
-            --text-sub: #64748b;
-            --accent: #2563eb;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
             --border: #e2e8f0;
-            --hover: #f1f5f9;
+            --border-hover: #cbd5e1;
+            --accent: #2563eb;
+            --accent-soft: #eff6ff;
+            --accent-text: #1d4ed8;
+            --highlight: #fef08a;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.05);
+            --shadow-lg: 0 12px 32px rgba(0,0,0,0.08);
         }
+
         @media (prefers-color-scheme: dark) {
             :root {
-                --bg: #0f172a;
-                --card-bg: #1e293b;
-                --text-main: #f8fafc;
-                --text-sub: #94a3b8;
+                --bg: #090d16;
+                --surface: rgba(15, 23, 42, 0.8);
+                --card-bg: #131b2e;
+                --text-primary: #f8fafc;
+                --text-secondary: #94a3b8;
+                --text-muted: #64748b;
+                --border: #1e293b;
+                --border-hover: #334155;
                 --accent: #3b82f6;
-                --border: #334155;
-                --hover: #293548;
+                --accent-soft: rgba(59, 130, 246, 0.15);
+                --accent-text: #93c5fd;
+                --highlight: rgba(253, 224, 71, 0.25);
+                --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+                --shadow-md: 0 4px 16px rgba(0,0,0,0.3);
+                --shadow-lg: 0 12px 36px rgba(0,0,0,0.5);
             }
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, sans-serif; }
-        body { background-color: var(--bg); color: var(--text-main); display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 20px 16px; }
-        .container { width: 100%; max-width: 680px; display: flex; flex-direction: column; gap: 16px; }
-        header { text-align: center; margin-bottom: 8px; }
-        h1 { font-size: 1.6rem; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.5px; }
-        p.desc { font-size: 0.85rem; color: var(--text-sub); }
-        
-        .search-box { 
-            position: sticky; 
-            top: 12px; 
-            z-index: 10; 
-            background: var(--card-bg); 
-            border-radius: 14px; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08); 
-            border: 1px solid var(--border); 
-            display: flex; 
-            align-items: center; 
-            padding-right: 12px; 
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
-        input { 
-            flex: 1; 
-            padding: 16px 20px; 
-            font-size: 1.1rem; 
-            border: none; 
-            outline: none; 
-            background: transparent; 
-            color: var(--text-main); 
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 36px 16px 80px 16px;
+            transition: background-color 0.2s ease;
         }
-        
-        /* 새로고침 / 지우기 버튼 */
+
+        .wrapper {
+            width: 100%;
+            max-width: 640px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 6px;
+        }
+
+        .brand {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+
+        .brand-icon {
+            font-size: 1.8rem;
+            line-height: 1;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+
+        h1 {
+            font-size: 1.9rem;
+            font-weight: 800;
+            letter-spacing: -0.8px;
+            color: var(--text-primary);
+        }
+
+        .desc {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+            letter-spacing: -0.2px;
+        }
+
+        .search-container {
+            position: sticky;
+            top: 16px;
+            z-index: 50;
+        }
+
+        .search-box {
+            background: var(--surface);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            align-items: center;
+            padding: 4px 14px 4px 18px;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .search-box:focus-within {
+            border-color: var(--accent);
+            box-shadow: var(--shadow-lg), 0 0 0 3px var(--accent-soft);
+            transform: translateY(-1px);
+        }
+
+        .search-icon {
+            color: var(--text-muted);
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+        }
+
+        input {
+            flex: 1;
+            padding: 14px 0;
+            font-size: 1.08rem;
+            border: none;
+            outline: none;
+            background: transparent;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        input::placeholder {
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
         .clear-btn {
             display: none;
             align-items: center;
             justify-content: center;
-            width: 30px;
-            height: 30px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
             border: none;
-            background: var(--hover);
-            color: var(--text-sub);
-            font-size: 14px;
-            font-weight: bold;
+            background: var(--border);
+            color: var(--text-secondary);
+            font-size: 13px;
             cursor: pointer;
             transition: all 0.15s ease;
         }
+
         .clear-btn:hover {
-            background: var(--border);
-            color: var(--text-main);
+            background: var(--text-muted);
+            color: #fff;
         }
+
         .clear-btn.show {
             display: flex;
         }
 
-        .stats { font-size: 0.85rem; color: var(--text-sub); padding: 0 8px; display: flex; justify-content: space-between; }
-        .section-title { font-size: 0.95rem; font-weight: 700; color: var(--text-sub); margin-top: 12px; margin-bottom: 6px; padding: 0 4px; }
-        .verse-list { display: flex; flex-direction: column; gap: 8px; }
-        .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; cursor: pointer; transition: transform 0.1s, border-color 0.1s, background 0.1s; position: relative; }
-        .card:hover { background: var(--hover); border-color: var(--accent); }
-        .card:active { transform: scale(0.99); }
-        .card.active { border-color: var(--accent); background: var(--hover); }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-        .badge { font-size: 0.75rem; font-weight: 600; padding: 2px 8px; border-radius: 6px; background: #e0e7ff; color: #3730a3; }
-        @media (prefers-color-scheme: dark) { .badge { background: #312e81; color: #c7d2fe; } }
-        .ref { font-weight: 700; font-size: 1rem; color: var(--accent); }
-        .content { font-size: 0.95rem; line-height: 1.6; word-break: keep-all; }
-        .highlight { background-color: #fef08a; color: #000; font-weight: bold; border-radius: 2px; padding: 0 2px; }
-        #toast { position: fixed; bottom: 24px; background: #0f172a; color: #fff; padding: 12px 24px; border-radius: 30px; font-size: 0.9rem; font-weight: 600; box-shadow: 0 10px 25px rgba(0,0,0,0.2); opacity: 0; pointer-events: none; transition: opacity 0.25s, transform 0.25s; transform: translateY(10px); z-index: 100; }
-        #toast.show { opacity: 1; transform: translateY(0); }
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            padding: 0 4px;
+            font-weight: 500;
+        }
+
+        .section-header {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin: 16px 0 8px 4px;
+        }
+
+        .card-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 16px 18px;
+            cursor: pointer;
+            transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .card:active {
+            transform: scale(0.99);
+        }
+
+        .card.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px var(--accent);
+        }
+
+        .card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .card-ref {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--accent);
+            letter-spacing: -0.3px;
+        }
+
+        .copy-pill {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 3px 9px;
+            border-radius: 20px;
+            background: var(--accent-soft);
+            color: var(--accent-text);
+            transition: all 0.15s ease;
+        }
+
+        .card:hover .copy-pill {
+            background: var(--accent);
+            color: #ffffff;
+        }
+
+        .card-body {
+            font-size: 0.98rem;
+            line-height: 1.68;
+            color: var(--text-primary);
+            word-break: keep-all;
+            letter-spacing: -0.2px;
+        }
+
+        .highlight {
+            background: var(--highlight);
+            color: inherit;
+            font-weight: 700;
+            border-radius: 3px;
+            padding: 0 2px;
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 30px;
+            background: rgba(15, 23, 42, 0.92);
+            color: #ffffff;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            padding: 12px 22px;
+            border-radius: 50px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateY(12px);
+            z-index: 100;
+            letter-spacing: -0.2px;
+        }
+
+        #toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: var(--text-secondary);
+            font-size: 0.92rem;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="wrapper">
         <header>
-            <h1>📖 Ereunao (상고하다)</h1>
+            <div class="brand">
+                <span class="brand-icon">📖</span>
+                <h1>Ereunao</h1>
+            </div>
             <p class="desc">구절(창1:1) 또는 단어(신하, 부활)를 입력하세요. 클릭하면 즉시 복사됩니다.</p>
         </header>
 
-        <div class="search-box">
-            <input type="text" id="query" placeholder="검색어 입력 (예: 창1:1, 요3:16, 신하)" autofocus autocomplete="off">
-            <button id="clear-btn" class="clear-btn" title="지우기 (Esc)" aria-label="입력 지우기">✕</button>
+        <div class="search-container">
+            <div class="search-box">
+                <div class="search-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </div>
+                <input type="text" id="query" placeholder="성경 검색 (예: 창1:1, 요3:16, 신하)" autofocus autocomplete="off">
+                <button id="clear-btn" class="clear-btn" title="지우기 (Esc)" aria-label="입력 지우기">✕</button>
+            </div>
         </div>
 
-        <div class="stats" id="stats"></div>
-        <div id="results" class="verse-list"></div>
+        <div class="stats-bar" id="stats"></div>
+        <div id="results" class="card-list"></div>
     </div>
 
-    <div id="toast">✅ 클립보드에 복사되었습니다!</div>
+    <div id="toast">✅ 복사되었습니다!</div>
 
     <script>
         const BOOK_MAP = {"창": "창세기", "출": "출애굽기", "레": "레위기", "민": "민수기", "신": "신명기", "수": "여호수아", "삿": "사사기", "룻": "룻기", "삼상": "사무엘상", "삼하": "사무엘하", "왕상": "열왕기상", "왕하": "열왕기하", "대상": "역대상", "대하": "역대하", "스": "에스라", "느": "느헤미야", "에": "에스더", "욥": "욥기", "시": "시편", "잠": "잠언", "전": "전도서", "아": "아가", "사": "이사야", "렘": "예레미야", "애": "예레미야애가", "겔": "에스겔", "단": "다니엘", "호": "호세아", "욜": "요엘", "암": "아모스", "옵": "오바댜", "욘": "요나", "미": "미가", "나": "나훔", "합": "하박국", "습": "스바냐", "학": "학개", "슥": "스가랴", "말": "말라기", "마": "마태복음", "막": "마가복음", "눅": "누가복음", "요": "요한복음", "행": "사도행전", "롬": "로마서", "고전": "고린도전서", "고후": "고린도후서", "갈": "갈라디아서", "엡": "에베소서", "빌": "빌립보서", "골": "골로새서", "살전": "데살로니가전서", "살후": "데살로니가후서", "딤전": "디모데전서", "딤후": "디모데후서", "딛": "디도서", "몬": "빌레몬서", "히": "히브리서", "약": "야고보서", "벧전": "베드로전서", "벧후": "베드로후서", "요일": "요한일서", "요이": "요한이서", "요삼": "요한삼서", "유": "유다서", "계": "요한계시록"};
@@ -130,7 +356,7 @@
         function showToast(text) {
             toast.textContent = text;
             toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 1800);
+            setTimeout(() => toast.classList.remove('show'), 1600);
         }
 
         function copyVerse(ref, text) {
@@ -140,7 +366,6 @@
             });
         }
 
-        // 글자 지우기 및 초기화 함수
         function clearSearch() {
             input.value = '';
             toggleClearBtn();
@@ -158,7 +383,6 @@
 
         clearBtn.addEventListener('click', clearSearch);
 
-        // Esc 키를 누르면 한 방에 초기화
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 clearSearch();
@@ -196,7 +420,7 @@
             const found = BIBLE.filter(item => item[0] === targetBook && item[1] === chapter && item[2] >= startV && item[2] <= endV);
 
             if (found.length === 0) {
-                resultsEl.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--text-sub);">❌ 구절을 찾을 수 없습니다.</div>`;
+                resultsEl.innerHTML = `<div class="empty-state">❌ 해당 구절을 찾을 수 없습니다.</div>`;
                 statsEl.innerHTML = '';
                 return;
             }
@@ -204,14 +428,14 @@
             const refTitle = `${fullName} ${chapter}:${startV}${startV !== endV ? '-' + endV : ''}`;
             const textContent = found.map(f => (startV === endV ? f[3] : `${f[2]}절 ${f[3]}`)).join('\n');
 
-            statsEl.innerHTML = `<span>1개 구절 검색됨</span>`;
+            statsEl.innerHTML = `<span>1개 구절 일치</span>`;
             resultsEl.innerHTML = `
                 <div class="card" onclick="copyVerse('${refTitle}', \`${textContent}\`)">
-                    <div class="card-header">
-                        <span class="ref">${refTitle}</span>
-                        <span class="badge">클릭하여 복사</span>
+                    <div class="card-top">
+                        <span class="card-ref">${refTitle}</span>
+                        <span class="copy-pill">복사하기</span>
                     </div>
-                    <div class="content">${textContent.replace(/\n/g, '<br>')}</div>
+                    <div class="card-body">${textContent.replace(/\n/g, '<br>')}</div>
                 </div>
             `;
             renderedCards = [{ ref: refTitle, text: textContent }];
@@ -227,7 +451,7 @@
 
             const total = matched.length;
             if (total === 0) {
-                resultsEl.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--text-sub);">❌ '${query}' 검색 결과가 없습니다.</div>`;
+                resultsEl.innerHTML = `<div class="empty-state">❌ '${query}' 검색 결과가 없습니다.</div>`;
                 statsEl.innerHTML = '';
                 return;
             }
@@ -235,7 +459,7 @@
             const otMatches = matched.filter(m => m[4] === 1);
             const ntMatches = matched.filter(m => m[4] === 0);
 
-            statsEl.innerHTML = `<span>총 <strong>${total}</strong>건 (구약 ${otMatches.length}건, 신약 ${ntMatches.length}건)</span><span>상위 30건 표시</span>`;
+            statsEl.innerHTML = `<span>검색 결과 <strong>${total}</strong>건</span><span>구약 ${otMatches.length} · 신약 ${ntMatches.length}</span>`;
 
             const displayList = [...otMatches.slice(0, 15), ...ntMatches.slice(0, 15)];
             renderedCards = [];
@@ -249,7 +473,7 @@
 
                 if (currentSection !== sectionName) {
                     currentSection = sectionName;
-                    html += `<div class="section-title">${sectionName}</div>`;
+                    html += `<div class="section-header">${sectionName}</div>`;
                 }
 
                 const ref = `${BOOK_MAP[item[0]]} ${item[1]}:${item[2]}`;
@@ -263,11 +487,11 @@
 
                 html += `
                     <div class="card" id="card-${idx}" onclick="copyVerse('${ref}', \`${item[3]}\`)">
-                        <div class="card-header">
-                            <span class="ref">${ref}</span>
-                            <span class="badge">복사</span>
+                        <div class="card-top">
+                            <span class="card-ref">${ref}</span>
+                            <span class="copy-pill">복사</span>
                         </div>
-                        <div class="content">${highlighted}</div>
+                        <div class="card-body">${highlighted}</div>
                     </div>
                 `;
             });
