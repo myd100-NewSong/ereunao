@@ -85,21 +85,26 @@
             margin-bottom: 6px;
         }
 
+        /* 멋진 커스텀 로고 스타일 */
         .brand {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            justify-content: center;
+            gap: 12px;
             margin-bottom: 6px;
         }
 
-        .brand-icon {
-            font-size: 1.8rem;
-            line-height: 1;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        .brand-logo {
+            width: 42px;
+            height: 42px;
+            border-radius: 11px;
+            object-fit: cover;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
         h1 {
-            font-size: 1.9rem;
+            font-size: 2rem;
             font-weight: 800;
             letter-spacing: -0.8px;
             color: var(--text-primary);
@@ -317,7 +322,7 @@
     <div class="wrapper">
         <header>
             <div class="brand">
-                <span class="brand-icon">📖</span>
+                <img src="icon.png" alt="Ereunao Logo" class="brand-logo">
                 <h1>Ereunao</h1>
             </div>
             <p class="desc">구절(창1:1) 또는 단어(신하, 부활)를 입력하세요. 클릭하면 즉시 복사됩니다.</p>
