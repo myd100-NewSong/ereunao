@@ -440,12 +440,38 @@
             setTimeout(() => toast.classList.remove('show'), 1600);
         }
 
+        function copyByIndex(i) {
+            const c = renderedCards[i];
+            if (c) copyVerse(c.ref, c.text);
+        }
+
+        function fallbackCopy(output) {
+            const ta = document.createElement('textarea');
+            ta.value = output;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            let ok = false;
+            try { ok = document.execCommand('copy'); } catch (e) {}
+            document.body.removeChild(ta);
+            return ok;
+        }
+
         function copyVerse(ref, text) {
             const verName = VER_CONFIG[currentVersion].name;
             const output = `[${ref} ${verName}]\n${text}`;
-            navigator.clipboard.writeText(output).then(() => {
-                showToast(`✅ [${ref}] 복사 완료!`);
-            });
+            const done = () => showToast(`✅ [${ref}] 복사 완료!`);
+            const fail = () => {
+                if (fallbackCopy(output)) done();
+                else showToast('⚠️ 복사에 실패했습니다');
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(output).then(done).catch(fail);
+            } else {
+                fail();
+            }
         }
 
         function clearSearch() {
@@ -520,7 +546,7 @@
 
             statsEl.innerHTML = `<span>📖 ${verLabel} 구절 확인 완료</span><span>클릭 또는 Enter로 복사</span>`;
             resultsEl.innerHTML = `
-                <div class="hero-card" onclick="copyVerse('${refTitle}', \`${textContent}\`)">
+                <div class="hero-card" onclick="copyByIndex(0)">
                     <div class="card-top">
                         <span class="card-ref">[${refTitle}]</span>
                         <span class="copy-pill">${verLabel} 복사</span>
@@ -579,7 +605,7 @@
                 renderedCards.push({ ref, text: item[vIndex] });
 
                 html += `
-                    <div class="card" id="card-${idx}" onclick="copyVerse('${ref}', \`${item[vIndex]}\`)">
+                    <div class="card" id="card-${idx}" onclick="copyByIndex(${idx})">
                         <div class="card-top">
                             <span class="card-ref">${ref}</span>
                             <span class="copy-pill">${verLabel}</span>
