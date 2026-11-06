@@ -389,6 +389,186 @@
             border-color: var(--accent);
             background: var(--accent-soft);
         }
+
+        .card-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .section-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cmt-btn {
+            font-size: 0.76rem;
+            font-weight: 700;
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid var(--accent);
+            background: var(--accent-soft);
+            color: var(--accent-text);
+            cursor: pointer;
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        .cmt-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 90;
+        }
+
+        .cmt-overlay.show {
+            display: flex;
+        }
+
+        .cmt-sheet {
+            width: 100%;
+            max-width: 650px;
+            max-height: 85vh;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px 20px 0 0;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            flex-direction: column;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        .cmt-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 18px 8px 18px;
+        }
+
+        .cmt-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            color: var(--accent);
+        }
+
+        .cmt-close {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: none;
+            background: var(--border);
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        .cmt-tabs {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding: 4px 18px 10px 18px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .cmt-tab {
+            flex: 0 0 auto;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .cmt-tab.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #ffffff;
+        }
+
+        .cmt-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px 18px 14px 18px;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .cmt-entry {
+            margin-bottom: 18px;
+        }
+
+        .cmt-range {
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: var(--accent-text);
+            margin-bottom: 4px;
+        }
+
+        .cmt-entry p {
+            font-size: 0.97rem;
+            line-height: 1.7;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            word-break: break-word;
+        }
+
+        .cmt-msg {
+            text-align: center;
+            padding: 36px 10px;
+            color: var(--text-secondary);
+            font-size: 0.92rem;
+            line-height: 1.6;
+        }
+
+        .cmt-retry {
+            display: block;
+            margin: 12px auto 0 auto;
+            padding: 7px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--accent);
+            background: var(--accent-soft);
+            color: var(--accent-text);
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .cmt-foot {
+            display: flex;
+            gap: 8px;
+            padding: 10px 18px 4px 18px;
+            border-top: 1px solid var(--border);
+        }
+
+        .cmt-foot-btn {
+            flex: 1;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .cmt-foot-btn.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #ffffff;
+        }
+
+        .cmt-note {
+            text-align: center;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            padding: 4px 18px 10px 18px;
+        }
     </style>
 </head>
 <body>
@@ -419,10 +599,26 @@
             </div>
         </div>
 
-        <div class="version-badge">0.6</div>
+        <div class="version-badge">0.7</div>
 
         <div class="stats-bar" id="stats"></div>
         <div id="results" class="card-list"></div>
+    </div>
+
+    <div id="cmt-overlay" class="cmt-overlay" onclick="closeCommentary()">
+        <div class="cmt-sheet" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-label="주석">
+            <div class="cmt-head">
+                <div class="cmt-title" id="cmt-title"></div>
+                <button type="button" class="cmt-close" onclick="closeCommentary()" aria-label="닫기">✕</button>
+            </div>
+            <div class="cmt-tabs" id="cmt-tabs"></div>
+            <div class="cmt-body" id="cmt-body"></div>
+            <div class="cmt-foot">
+                <button type="button" id="cmt-copy" class="cmt-foot-btn primary">📋 복사</button>
+                <button type="button" id="cmt-whole" class="cmt-foot-btn">이 장 전체 보기</button>
+            </div>
+            <div class="cmt-note">영어 원문 · 공개 자료(AO Lab Free Use Bible API)</div>
+        </div>
     </div>
 
     <div id="toast">✅ 복사되었습니다!</div>
@@ -584,7 +780,8 @@
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                clearSearch();
+                if (cmtOverlay.classList.contains('show')) closeCommentary();
+                else clearSearch();
             }
         });
 
@@ -650,12 +847,12 @@
             const bodyHtml = (t) => escapeHtml(t).replace(/\n/g, '<br>');
 
             if (compareMode) {
-                renderedCards = VER_KEYS.map(k => ({ ref: refTitle, text: textFor(VER_CONFIG[k].idx), ver: k }));
+                renderedCards = VER_KEYS.map(k => ({ ref: refTitle, text: textFor(VER_CONFIG[k].idx), ver: k, book: targetBook, chapter, v1: startV, v2: endV }));
                 defaultIndex = VER_KEYS.indexOf(currentVersion);
 
                 statsEl.innerHTML = `<span>📚 5개 역본 비교</span><span>카드를 누르면 해당 역본 복사</span>`;
 
-                let html = `<div class="section-header">📖 ${escapeHtml(refTitle)}</div>`;
+                let html = `<div class="section-header section-row"><span>📖 ${escapeHtml(refTitle)}</span><button type="button" class="cmt-btn" onclick="openCommentary(0)">📖 주석 보기</button></div>`;
                 renderedCards.forEach((c, i) => {
                     const isCur = c.ver === currentVersion;
                     html += `
@@ -674,14 +871,14 @@
 
             const verLabel = VER_CONFIG[currentVersion].name;
             const text = textFor(vIndex);
-            renderedCards = [{ ref: refTitle, text, ver: currentVersion }];
+            renderedCards = [{ ref: refTitle, text, ver: currentVersion, book: targetBook, chapter, v1: startV, v2: endV }];
 
             statsEl.innerHTML = `<span>📖 ${verLabel} 구절 확인 완료</span><span>클릭 또는 Enter로 복사</span>`;
             resultsEl.innerHTML = `
                 <div class="hero-card" onclick="copyByIndex(0)">
                     <div class="card-top">
                         <span class="card-ref">[${escapeHtml(refTitle)}]</span>
-                        <span class="copy-pill">${verLabel} 복사</span>
+                        <span class="card-actions"><button type="button" class="cmt-btn" onclick="event.stopPropagation(); openCommentary(0)">📖 주석</button><span class="copy-pill">${verLabel} 복사</span></span>
                     </div>
                     <div class="card-body">${bodyHtml(text)}</div>
                     <div class="hero-guide">👉 본문 확인 후 카드를 누르면 [${verLabel}] 본문이 복사됩니다.</div>
@@ -727,13 +924,13 @@
                 }
 
                 const ref = `${BOOK_MAP[item[0]]} ${item[1]}:${item[2]}`;
-                renderedCards.push({ ref, text: item[vIndex], ver: currentVersion });
+                renderedCards.push({ ref, text: item[vIndex], ver: currentVersion, book: item[0], chapter: item[1], v1: item[2], v2: item[2] });
 
                 html += `
                     <div class="card" id="card-${idx}" onclick="copyByIndex(${idx})">
                         <div class="card-top">
                             <span class="card-ref">${escapeHtml(ref)}</span>
-                            <span class="copy-pill">${verLabel}</span>
+                            <span class="card-actions"><button type="button" class="cmt-btn" onclick="event.stopPropagation(); openCommentary(${idx})">📖 주석</button><span class="copy-pill">${verLabel}</span></span>
                         </div>
                         <div class="card-body">${highlightHtml(item[vIndex], keywords)}</div>
                     </div>
@@ -779,6 +976,263 @@
         }
 
         updateCompareBtn();
+
+        /* ---------- 주석 보기 (온라인 조회) ---------- */
+
+        const HELLOAO = 'https://bible.helloao.org/api/';
+
+        // 한글 약어 → API 책 코드
+        const USFM = {
+            '창':'GEN','출':'EXO','레':'LEV','민':'NUM','신':'DEU','수':'JOS','삿':'JDG','룻':'RUT',
+            '삼상':'1SA','삼하':'2SA','왕상':'1KI','왕하':'2KI','대상':'1CH','대하':'2CH','스':'EZR','느':'NEH',
+            '에':'EST','욥':'JOB','시':'PSA','잠':'PRO','전':'ECC','아':'SNG','사':'ISA','렘':'JER',
+            '애':'LAM','겔':'EZK','단':'DAN','호':'HOS','욜':'JOL','암':'AMO','옵':'OBA','욘':'JON',
+            '미':'MIC','나':'NAM','합':'HAB','습':'ZEP','학':'HAG','슥':'ZEC','말':'MAL',
+            '마':'MAT','막':'MRK','눅':'LUK','요':'JHN','행':'ACT','롬':'ROM','고전':'1CO','고후':'2CO',
+            '갈':'GAL','엡':'EPH','빌':'PHP','골':'COL','살전':'1TH','살후':'2TH','딤전':'1TI','딤후':'2TI',
+            '딛':'TIT','몬':'PHM','히':'HEB','약':'JAS','벧전':'1PE','벧후':'2PE','요일':'1JN','요이':'2JN',
+            '요삼':'3JN','유':'JUD','계':'REV'
+        };
+
+        const cmtOverlay = document.getElementById('cmt-overlay');
+        const cmtTitle = document.getElementById('cmt-title');
+        const cmtTabs = document.getElementById('cmt-tabs');
+        const cmtBody = document.getElementById('cmt-body');
+        const cmtCopyBtn = document.getElementById('cmt-copy');
+        const cmtWholeBtn = document.getElementById('cmt-whole');
+
+        let cmtListPromise = null;
+        const cmtCache = new Map();
+        let cmtList = [];
+        let cmtCard = null;
+        let cmtCardIdx = -1;
+        let cmtCurrent = null;
+        let cmtWhole = false;
+        let cmtToken = 0;
+        let cmtText = '';
+        try { cmtCurrent = localStorage.getItem('ereunao.cmt'); } catch (e) {}
+
+        function fetchJson(url) {
+            return fetch(url).then(r => {
+                if (!r.ok) { const err = new Error('HTTP ' + r.status); err.status = r.status; throw err; }
+                return r.json();
+            });
+        }
+
+        function loadCommentaryList() {
+            if (!cmtListPromise) {
+                cmtListPromise = fetchJson(HELLOAO + 'available_commentaries.json').then(data => {
+                    const arr = Array.isArray(data) ? data : (data.commentaries || []);
+                    const order = ['matthew-henry', 'jamieson', 'calvin', 'gill', 'clarke', 'tyndale', 'keil', 'wesley', 'barnes', 'poole'];
+                    const rank = (id) => {
+                        const i = order.findIndex(k => id.toLowerCase().includes(k));
+                        return i === -1 ? 99 : i;
+                    };
+                    const list = arr
+                        .filter(c => c && c.id)
+                        .map(c => ({ id: c.id, name: c.englishName || c.name || c.commonName || c.shortName || c.id }))
+                        .sort((a, b) => rank(a.id) - rank(b.id));
+                    if (list.length === 0) throw new Error('empty list');
+                    cmtList = list;
+                    return list;
+                }).catch(err => { cmtListPromise = null; throw err; });
+            }
+            return cmtListPromise;
+        }
+
+        // API 응답의 중첩된 내용에서 글자만 뽑기
+        function flattenText(node) {
+            if (node == null) return '';
+            if (typeof node === 'string') return node;
+            if (Array.isArray(node)) {
+                const parts = node.map(flattenText).filter(s => s.trim() !== '');
+                const allStrings = node.every(n => typeof n === 'string');
+                return parts.join(allStrings ? '\n\n' : '');
+            }
+            if (typeof node === 'object') {
+                if (typeof node.text === 'string') return node.text;
+                if (node.content != null) return flattenText(node.content);
+            }
+            return '';
+        }
+
+        // 선택한 구절 범위(v1~v2)에 해당하는 주석 항목 고르기
+        function pickEntries(data, v1, v2, whole) {
+            const raw = (data && data.chapter && data.chapter.content) || (data && data.content) || [];
+            const items = raw
+                .filter(x => x && x.type === 'verse' && typeof x.number === 'number')
+                .sort((a, b) => a.number - b.number);
+            const out = [];
+            items.forEach((it, i) => {
+                const next = items[i + 1];
+                const start = it.number;
+                const end = next ? Math.max(start, next.number - 1) : null; // null = 장 끝까지
+                const covers = (start <= v2) && (end === null || end >= v1);
+                if (whole || covers) {
+                    const text = flattenText(it.content).trim();
+                    if (text) out.push({ start, end, text });
+                }
+            });
+            return out;
+        }
+
+        function rangeLabel(e) {
+            if (e.end === null) return `${e.start}절 ~`;
+            return e.end > e.start ? `${e.start}–${e.end}절` : `${e.start}절`;
+        }
+
+        function textToHtml(t) {
+            return t.split(/\n{2,}/)
+                .map(p => `<p>${escapeHtml(p).replace(/\n/g, '<br>')}</p>`)
+                .join('');
+        }
+
+        function cmtName(id) {
+            const c = cmtList.find(x => x.id === id);
+            return c ? c.name : id;
+        }
+
+        function showCmtMessage(html, retryFn) {
+            cmtText = '';
+            const box = document.createElement('div');
+            box.className = 'cmt-msg';
+            box.innerHTML = html;
+            if (retryFn) {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'cmt-retry';
+                b.textContent = '다시 시도';
+                b.addEventListener('click', retryFn);
+                box.appendChild(b);
+            }
+            cmtBody.innerHTML = '';
+            cmtBody.appendChild(box);
+        }
+
+        async function openCommentary(i) {
+            const c = renderedCards[i];
+            if (!c || !USFM[c.book]) return;
+            cmtCard = c;
+            cmtCardIdx = i;
+            cmtWhole = false;
+            cmtWholeBtn.textContent = '이 장 전체 보기';
+            cmtTitle.textContent = `${c.ref} · 주석`;
+            cmtTabs.innerHTML = '';
+            cmtBody.innerHTML = '<div class="cmt-msg">불러오는 중…</div>';
+            cmtText = '';
+            cmtOverlay.classList.add('show');
+            document.documentElement.style.overflow = 'hidden';
+
+            try {
+                const list = await loadCommentaryList();
+                if (cmtCard !== c) return;
+                renderCmtTabs(list);
+                const id = list.some(x => x.id === cmtCurrent) ? cmtCurrent : list[0].id;
+                selectCommentary(id, [id]);
+            } catch (err) {
+                if (cmtCard !== c) return;
+                showCmtMessage('주석 목록을 불러오지 못했습니다.<br><small>인터넷 연결을 확인해 주세요.</small>', () => openCommentary(i));
+            }
+        }
+
+        function renderCmtTabs(list) {
+            cmtTabs.innerHTML = '';
+            list.forEach(c => {
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'cmt-tab';
+                b.dataset.id = c.id;
+                b.textContent = c.name;
+                b.addEventListener('click', () => selectCommentary(c.id));  // 직접 누른 탭은 자동 이동 없음
+                cmtTabs.appendChild(b);
+            });
+        }
+
+        async function selectCommentary(id, autoTried) {
+            cmtCurrent = id;
+            try { localStorage.setItem('ereunao.cmt', id); } catch (e) {}
+            Array.from(cmtTabs.children).forEach(b => b.classList.toggle('active', b.dataset.id === id));
+
+            const c = cmtCard;
+            const token = ++cmtToken;
+            cmtText = '';
+            cmtBody.innerHTML = '<div class="cmt-msg">불러오는 중…</div>';
+
+            const url = `${HELLOAO}c/${encodeURIComponent(id)}/${USFM[c.book]}/${c.chapter}.json`;
+            try {
+                let data = cmtCache.get(url);
+                if (!data) {
+                    data = await fetchJson(url);
+                    cmtCache.set(url, data);
+                }
+                if (token !== cmtToken) return;
+                renderCommentary(data, id);
+            } catch (err) {
+                if (token !== cmtToken) return;
+                if (err && err.status === 404 && autoTried) {
+                    const nextC = cmtList.find(x => !autoTried.includes(x.id));
+                    if (nextC) {
+                        autoTried.push(nextC.id);
+                        selectCommentary(nextC.id, autoTried);
+                        return;
+                    }
+                }
+                if (err && err.status === 404) {
+                    showCmtMessage(`이 주석은 ${escapeHtml(c.ref)} 부분을 다루지 않습니다.<br><small>다른 주석 탭을 눌러 보세요.</small>`);
+                } else {
+                    showCmtMessage('주석을 불러오지 못했습니다.<br><small>인터넷 연결을 확인해 주세요.</small>', () => selectCommentary(id));
+                }
+            }
+        }
+
+        function renderCommentary(data, id) {
+            const c = cmtCard;
+            const entries = pickEntries(data, c.v1, c.v2, cmtWhole);
+            if (entries.length === 0) {
+                showCmtMessage(`이 주석에는 ${escapeHtml(c.ref)}에 대한 설명이 없습니다.<br><small>"이 장 전체 보기"를 눌러 보세요.</small>`);
+                return;
+            }
+            cmtText = `[${cmtName(id)} · ${cmtWhole ? c.ref.replace(/:.*$/, '') + '장 전체' : c.ref}]\n\n` +
+                entries.map(e => `(${rangeLabel(e)})\n${e.text}`).join('\n\n');
+            cmtBody.innerHTML = entries.map(e => `
+                <div class="cmt-entry">
+                    <div class="cmt-range">${escapeHtml(rangeLabel(e))}</div>
+                    ${textToHtml(e.text)}
+                </div>
+            `).join('');
+            cmtBody.scrollTop = 0;
+        }
+
+        function toggleCmtWhole() {
+            if (!cmtCard || !cmtCurrent) return;
+            cmtWhole = !cmtWhole;
+            cmtWholeBtn.textContent = cmtWhole ? '이 구절만 보기' : '이 장 전체 보기';
+            selectCommentary(cmtCurrent);
+        }
+
+        function copyCommentary() {
+            if (!cmtText) { showToast('복사할 주석이 없습니다'); return; }
+            const done = () => showToast('✅ 주석 복사 완료!');
+            const fail = () => {
+                if (fallbackCopy(cmtText)) done();
+                else showToast('⚠️ 복사에 실패했습니다');
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(cmtText).then(done).catch(fail);
+            } else {
+                fail();
+            }
+        }
+
+        function closeCommentary() {
+            cmtOverlay.classList.remove('show');
+            document.documentElement.style.overflow = '';
+            cmtCard = null;
+            cmtToken++;
+        }
+
+        cmtCopyBtn.addEventListener('click', copyCommentary);
+        cmtWholeBtn.addEventListener('click', toggleCmtWhole);
 
         /* ---------- 이전에 설치된 서비스 워커/캐시 정리 ---------- */
 
