@@ -360,6 +360,35 @@
             color: var(--text-secondary);
             font-size: 0.92rem;
         }
+
+        .compare-btn {
+            margin-top: 4px;
+            padding: 5px 14px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.18s ease;
+        }
+
+        .compare-btn.active {
+            background: var(--accent-soft);
+            color: var(--accent-text);
+            border-color: var(--accent);
+        }
+
+        .card.current {
+            border-color: var(--accent);
+            box-shadow: var(--shadow-md), 0 0 0 2px var(--accent-soft);
+        }
+
+        .card.active {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+        }
     </style>
 </head>
 <body>
@@ -377,6 +406,7 @@
             </div>
 
             <p class="desc">구절(창1:1, 창1;1, 창1.1) 또는 단어를 입력하세요.</p>
+            <button type="button" id="compare-btn" class="compare-btn" onclick="toggleCompare()">📚 역본 비교 ON</button>
         </header>
 
         <div class="search-container">
@@ -389,7 +419,7 @@
             </div>
         </div>
 
-        <div class="version-badge">0.4</div>
+        <div class="version-badge">0.6</div>
 
         <div class="stats-bar" id="stats"></div>
         <div id="results" class="card-list"></div>
@@ -407,6 +437,7 @@
         const resultsEl = document.getElementById('results');
         const statsEl = document.getElementById('stats');
         const toast = document.getElementById('toast');
+        const compareBtn = document.getElementById('compare-btn');
 
         let currentVersion = 'nkrv';
         let vIndex = 3;
@@ -418,15 +449,63 @@
             'nksv': { name: '새번역', idx: 6 },
             'bareun': { name: '바른성경', idx: 7 }
         };
+        const VER_KEYS = Object.keys(VER_CONFIG);
 
-        let currentIndex = -1;
-        let renderedCards = [];
+        let currentIndex = -1;   // 방향키로 선택된 카드
+        let defaultIndex = 0;    // Enter 시 기본으로 복사할 카드
+        let renderedCards = [];  // [{ ref, text, ver }]
+        let searchTimer = null;
+        let toastTimer = null;
+        let compareMode = true;
+
+        try { compareMode = localStorage.getItem('ereunao.compare') !== '0'; } catch (e) {}
+
+        /* ---------- 안전 유틸 ---------- */
+
+        function escapeHtml(s) {
+            return String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function escapeRegExp(s) {
+            return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // 한글 단어 시작 위치에서만 매칭 (lookbehind 미지원 브라우저는 일반 매칭으로 대체)
+        function buildRegex(source, flags) {
+            try {
+                return new RegExp('(?<![가-힣])' + source, flags);
+            } catch (e) {
+                return new RegExp(source, flags);
+            }
+        }
+
+        // 본문을 HTML 이스케이프한 뒤 검색어만 안전하게 하이라이트
+        function highlightHtml(text, keywords) {
+            const src = keywords
+                .slice()
+                .sort((a, b) => b.length - a.length)
+                .map(escapeRegExp)
+                .join('|');
+            const re = buildRegex('(' + src + ')', 'gi');
+            return text.split(re).map((part, i) =>
+                i % 2 === 1
+                    ? '<span class="highlight">' + escapeHtml(part) + '</span>'
+                    : escapeHtml(part)
+            ).join('');
+        }
+
+        /* ---------- 화면 제어 ---------- */
 
         function switchVersion(ver) {
             currentVersion = ver;
             vIndex = VER_CONFIG[ver].idx;
 
-            Object.keys(VER_CONFIG).forEach(k => {
+            VER_KEYS.forEach(k => {
                 document.getElementById('btn-' + k).classList.toggle('active', k === ver);
             });
 
@@ -434,16 +513,26 @@
             search();
         }
 
+        function updateCompareBtn() {
+            compareBtn.classList.toggle('active', compareMode);
+            compareBtn.textContent = compareMode ? '📚 역본 비교 ON' : '📚 역본 비교 OFF';
+        }
+
+        function toggleCompare() {
+            compareMode = !compareMode;
+            try { localStorage.setItem('ereunao.compare', compareMode ? '1' : '0'); } catch (e) {}
+            updateCompareBtn();
+            search();
+        }
+
         function showToast(text) {
             toast.textContent = text;
             toast.classList.add('show');
-            setTimeout(() => toast.classList.remove('show'), 1600);
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove('show'), 1600);
         }
 
-        function copyByIndex(i) {
-            const c = renderedCards[i];
-            if (c) copyVerse(c.ref, c.text);
-        }
+        /* ---------- 복사 ---------- */
 
         function fallbackCopy(output) {
             const ta = document.createElement('textarea');
@@ -459,10 +548,10 @@
             return ok;
         }
 
-        function copyVerse(ref, text) {
-            const verName = VER_CONFIG[currentVersion].name;
+        function copyVerse(ref, text, verKey) {
+            const verName = VER_CONFIG[verKey || currentVersion].name;
             const output = `[${ref} ${verName}]\n${text}`;
-            const done = () => showToast(`✅ [${ref}] 복사 완료!`);
+            const done = () => showToast(`✅ [${ref} ${verName}] 복사 완료!`);
             const fail = () => {
                 if (fallbackCopy(output)) done();
                 else showToast('⚠️ 복사에 실패했습니다');
@@ -474,19 +563,21 @@
             }
         }
 
+        function copyByIndex(i) {
+            const c = renderedCards[i];
+            if (c) copyVerse(c.ref, c.text, c.ver);
+        }
+
+        /* ---------- 검색 ---------- */
+
         function clearSearch() {
             input.value = '';
-            toggleClearBtn();
             search();
             input.focus();
         }
 
         function toggleClearBtn() {
-            if (input.value.trim().length > 0) {
-                clearBtn.classList.add('show');
-            } else {
-                clearBtn.classList.remove('show');
-            }
+            clearBtn.classList.toggle('show', input.value.trim().length > 0);
         }
 
         clearBtn.addEventListener('click', clearSearch);
@@ -497,8 +588,20 @@
             }
         });
 
-        function search() {
+        // 입력 중에는 120ms 디바운스
+        function scheduleSearch() {
             toggleClearBtn();
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(search, 120);
+        }
+
+        function search() {
+            clearTimeout(searchTimer);
+            searchTimer = null;
+            toggleClearBtn();
+            currentIndex = -1;
+            defaultIndex = 0;
+
             const rawInput = input.value.trim();
             if (!rawInput) {
                 resultsEl.innerHTML = '';
@@ -516,62 +619,90 @@
 
             const match = normalized.match(/^([가-힣]+)\s*(\d+)(?:[:\s]|장\s*)(\d+)(?:절)?(?:\s*[-]\s*(\d+)(?:절)?)?$/);
 
-            if (match) {
-                handleVerseLookup(match);
-            } else {
-                handleKeywordSearch(rawInput);
-            }
+            // 책 이름으로 인식되지 않으면 일반 키워드 검색으로 넘김
+            if (match && handleVerseLookup(match)) return;
+            handleKeywordSearch(rawInput);
         }
 
         function handleVerseLookup(match) {
             const bookRaw = match[1];
-            const chapter = parseInt(match[2]);
-            const startV = parseInt(match[3]);
-            const endV = match[4] ? parseInt(match[4]) : startV;
+            const chapter = parseInt(match[2], 10);
+            let startV = parseInt(match[3], 10);
+            let endV = match[4] ? parseInt(match[4], 10) : startV;
+            if (endV < startV) { const t = startV; startV = endV; endV = t; }
 
             const targetBook = REVERSE_BOOK_MAP[bookRaw] || bookRaw;
-            const fullName = BOOK_MAP[targetBook] || targetBook;
+            const fullName = BOOK_MAP[targetBook];
+            if (!fullName) return false;
 
             const found = BIBLE.filter(item => item[0] === targetBook && item[1] === chapter && item[2] >= startV && item[2] <= endV);
 
             if (found.length === 0) {
                 resultsEl.innerHTML = `<div class="empty-state">❌ 해당 구절을 찾을 수 없습니다.</div>`;
                 statsEl.innerHTML = '';
-                return;
+                renderedCards = [];
+                return true;
+            }
+
+            const refTitle = `${fullName} ${chapter}:${startV}${startV !== endV ? '-' + endV : ''}`;
+            const multi = startV !== endV;
+            const textFor = (idx) => found.map(f => (multi ? `${f[2]}절 ${f[idx]}` : f[idx])).join('\n');
+            const bodyHtml = (t) => escapeHtml(t).replace(/\n/g, '<br>');
+
+            if (compareMode) {
+                renderedCards = VER_KEYS.map(k => ({ ref: refTitle, text: textFor(VER_CONFIG[k].idx), ver: k }));
+                defaultIndex = VER_KEYS.indexOf(currentVersion);
+
+                statsEl.innerHTML = `<span>📚 5개 역본 비교</span><span>카드를 누르면 해당 역본 복사</span>`;
+
+                let html = `<div class="section-header">📖 ${escapeHtml(refTitle)}</div>`;
+                renderedCards.forEach((c, i) => {
+                    const isCur = c.ver === currentVersion;
+                    html += `
+                        <div class="card${isCur ? ' current' : ''}" id="card-${i}" onclick="copyByIndex(${i})">
+                            <div class="card-top">
+                                <span class="card-ref">${VER_CONFIG[c.ver].name}</span>
+                                <span class="copy-pill">복사</span>
+                            </div>
+                            <div class="card-body">${bodyHtml(c.text)}</div>
+                        </div>
+                    `;
+                });
+                resultsEl.innerHTML = html;
+                return true;
             }
 
             const verLabel = VER_CONFIG[currentVersion].name;
-            const refTitle = `${fullName} ${chapter}:${startV}${startV !== endV ? '-' + endV : ''}`;
-            const textContent = found.map(f => (startV === endV ? f[vIndex] : `${f[2]}절 ${f[vIndex]}`)).join('\n');
+            const text = textFor(vIndex);
+            renderedCards = [{ ref: refTitle, text, ver: currentVersion }];
 
             statsEl.innerHTML = `<span>📖 ${verLabel} 구절 확인 완료</span><span>클릭 또는 Enter로 복사</span>`;
             resultsEl.innerHTML = `
                 <div class="hero-card" onclick="copyByIndex(0)">
                     <div class="card-top">
-                        <span class="card-ref">[${refTitle}]</span>
+                        <span class="card-ref">[${escapeHtml(refTitle)}]</span>
                         <span class="copy-pill">${verLabel} 복사</span>
                     </div>
-                    <div class="card-body">${textContent.replace(/\n/g, '<br>')}</div>
+                    <div class="card-body">${bodyHtml(text)}</div>
                     <div class="hero-guide">👉 본문 확인 후 카드를 누르면 [${verLabel}] 본문이 복사됩니다.</div>
                 </div>
             `;
-            renderedCards = [{ ref: refTitle, text: textContent }];
+            return true;
         }
 
         function handleKeywordSearch(query) {
             const keywords = query.split(/\s+/).filter(Boolean);
-            const regexes = keywords.map(kw => new RegExp(`(?<![가-힣])${kw}`, 'i'));
+            const regexes = keywords.map(kw => buildRegex(escapeRegExp(kw), 'i'));
 
-            const matched = BIBLE.filter(item => {
-                return regexes.every(re => re.test(item[vIndex]));
-            });
+            const matched = BIBLE.filter(item => regexes.every(re => re.test(item[vIndex])));
 
             const total = matched.length;
             const verLabel = VER_CONFIG[currentVersion].name;
 
             if (total === 0) {
-                resultsEl.innerHTML = `<div class="empty-state">❌ [${verLabel}] '${query}' 검색 결과가 없습니다.</div>`;
+                resultsEl.innerHTML = `<div class="empty-state">❌ [${verLabel}] '${escapeHtml(query)}' 검색 결과가 없습니다.</div>`;
                 statsEl.innerHTML = '';
+                renderedCards = [];
                 return;
             }
 
@@ -596,21 +727,15 @@
                 }
 
                 const ref = `${BOOK_MAP[item[0]]} ${item[1]}:${item[2]}`;
-                let highlighted = item[vIndex];
-                keywords.forEach(kw => {
-                    const re = new RegExp(`(${kw})`, 'gi');
-                    highlighted = highlighted.replace(re, '<span class="highlight">$1</span>');
-                });
-
-                renderedCards.push({ ref, text: item[vIndex] });
+                renderedCards.push({ ref, text: item[vIndex], ver: currentVersion });
 
                 html += `
                     <div class="card" id="card-${idx}" onclick="copyByIndex(${idx})">
                         <div class="card-top">
-                            <span class="card-ref">${ref}</span>
+                            <span class="card-ref">${escapeHtml(ref)}</span>
                             <span class="copy-pill">${verLabel}</span>
                         </div>
-                        <div class="card-body">${highlighted}</div>
+                        <div class="card-body">${highlightHtml(item[vIndex], keywords)}</div>
                     </div>
                 `;
             });
@@ -618,8 +743,17 @@
             resultsEl.innerHTML = html;
         }
 
-        input.addEventListener('input', search);
+        input.addEventListener('input', scheduleSearch);
         input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (searchTimer) search();   // 디바운스 대기 중이면 즉시 검색
+                const targetIdx = currentIndex >= 0 ? currentIndex : defaultIndex;
+                const c = renderedCards[targetIdx];
+                if (c) copyVerse(c.ref, c.text, c.ver);
+                return;
+            }
+
             if (renderedCards.length === 0) return;
 
             if (e.key === 'ArrowDown') {
@@ -630,11 +764,6 @@
                 e.preventDefault();
                 currentIndex = Math.max(currentIndex - 1, 0);
                 updateCardSelection();
-            } else if (e.key === 'Enter') {
-                e.preventDefault();
-                const targetIdx = currentIndex >= 0 ? currentIndex : 0;
-                const c = renderedCards[targetIdx];
-                if (c) copyVerse(c.ref, c.text);
             }
         });
 
@@ -647,6 +776,21 @@
                     c.classList.remove('active');
                 }
             });
+        }
+
+        updateCompareBtn();
+
+        /* ---------- 이전에 설치된 서비스 워커/캐시 정리 ---------- */
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations()
+                .then(regs => regs.forEach(r => r.unregister()))
+                .catch(() => {});
+        }
+        if (window.caches) {
+            caches.keys()
+                .then(keys => keys.filter(k => k.startsWith('ereunao-')).forEach(k => caches.delete(k)))
+                .catch(() => {});
         }
     </script>
 </body>
