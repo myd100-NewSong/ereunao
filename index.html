@@ -442,7 +442,7 @@
             </div>
         </div>
 
-        <div class="version-badge">0.8</div>
+        <div class="version-badge">0.9</div>
 
         <div class="stats-bar" id="stats"></div>
         <div id="results" class="card-list"></div>
@@ -716,7 +716,7 @@
 
             const refTitle = `${fullName} ${chapter}:${startV}${startV !== endV ? '-' + endV : ''}`;
             const multi = startV !== endV;
-            const textFor = (idx) => found.map(f => (multi ? `${f[2]}절 ${f[idx]}` : f[idx])).join('\n');
+            const textFor = (idx) => found.filter(f => f[idx]).map(f => (multi ? `${f[2]}절 ${f[idx]}` : f[idx])).join('\n') || '(이 역본에는 해당 절이 없습니다)';
             const bodyHtml = (t) => escapeHtml(t).replace(/\n/g, '<br>');
 
             if (compareMode) {
