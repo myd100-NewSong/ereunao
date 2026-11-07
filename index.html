@@ -442,7 +442,7 @@
             </div>
         </div>
 
-        <div class="version-badge">1.0</div>
+        <div class="version-badge">1.1</div>
 
         <div class="stats-bar" id="stats"></div>
         <div id="results" class="card-list"></div>
@@ -471,12 +471,16 @@
         const loaded = {};
         let metaP = null;
 
+        // 데이터 버전 = 앱 버전. 앱 버전이 바뀌면 예전 보관 데이터는 자동으로 지워지고 새로 받습니다.
+        const DATA_VER = '1.1';
+        if (window.caches) caches.keys().then(ks => ks.filter(k => k.startsWith('bible-data-') && k !== 'bible-data-' + DATA_VER).forEach(k => caches.delete(k))).catch(() => {});
+
         // 데이터 파일: 한 번 받으면 브라우저 저장소에 보관 (성경 본문은 바뀌지 않음)
         function getData(file) {
-            const url = 'data/' + file;
+            const url = 'data/' + file + '?v=' + DATA_VER;
             const net = () => fetch(url).then(r => { if (!r.ok) throw new Error(r.status); return r; });
             if (!window.caches) return net().then(r => r.json());
-            return caches.open('bible-data-1')
+            return caches.open('bible-data-' + DATA_VER)
                 .then(c => c.match(url).then(hit => hit ? hit.json() : net().then(r => { c.put(url, r.clone()); return r.json(); })))
                 .catch(() => net().then(r => r.json()));
         }
