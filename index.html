@@ -519,51 +519,60 @@
                 return;
             }
 
-            const qClean = q.replace(/\s+/g, '').toLowerCase();
+            const cleanQ = q.toLowerCase().replace(/\s+/g, '');
+            let filtered = [];
+            let hintMessage = "";
 
-            const filtered = BIBLE.filter(row => {
-                const text = row[versionIdxMap[currentVersion]] || "";
-                const ref1 = `${row[0]}${row[1]}:${row[2]}`.toLowerCase();
-                const ref2 = `${row[0]}${row[1]};${row[2]}`.toLowerCase();
-                const ref3 = `${row[0]}${row[1]}.${row[2]}`.toLowerCase();
-                const refChapterOnly = `${row[0]}${row[1]}`.toLowerCase();
-                const refChapterJang = `${row[0]}${row[1]}장`.toLowerCase();
-
-                // 텍스트 검색, 장/절 검색, 장 전체 검색(예: 창1장)
-                return text.toLowerCase().includes(qClean) || 
-                       ref1.includes(qClean) || 
-                       ref2.includes(qClean) || 
-                       ref3.includes(qClean) || 
-                       refChapterOnly === qClean || 
-                       refChapterJang === qClean;
-            });
-
-            // 힌트 분석 (실제 66권 절수 데이터베이스 기준)
-            let rangeHintHtml = '';
-            
-            // 패턴 1: 범위 검색 (예: 창1:1-, 창 1:1-5, 창1:1~)
-            const rangeMatch = q.match(/^([가-힣]+)\s*(\d+)[:;.](\d+)[-~]?$/);
-            // 패턴 2: 장 검색 (예: 창1장, 창 1)
-            const chapterMatch = q.match(/^([가-힣]+)\s*(\d+)(장)?$/);
+            // 1) 범위 검색 처리 (예: 창1:1-, 창1:1-31)
+            const rangeMatch = q.match(/^([가-힣]+)\s*(\d+)[:;.](\d+)\s*-\s*(\d+)?$/);
+            // 2) 장 전체 검색 처리 (예: 창1장, 창1)
+            const chapterOnlyMatch = q.match(/^([가-힣]+)\s*(\d+)(?:장)?$/);
 
             if (rangeMatch) {
                 const book = rangeMatch[1];
                 const chapter = parseInt(rangeMatch[2], 10);
-                const startVerse = rangeMatch[3];
-                const maxVerse = getMaxVerseCount(book, chapter);
+                const startVerse = parseInt(rangeMatch[3], 10);
+                const maxVerse = (BIBLE_VERSE_COUNTS[book] && BIBLE_VERSE_COUNTS[book][chapter]) || 31;
+                const endVerse = rangeMatch[4] ? parseInt(rangeMatch[4], 10) : maxVerse;
+
+                hintMessage = `💡 ${book}${chapter}장은 ${maxVerse}절까지 있습니다 (${book}${chapter}:${startVerse}~${maxVerse})`;
+
+                filtered = BIBLE.filter(row => {
+                    return row[0] === book && row[1] === chapter && row[2] >= startVerse && row[2] <= endVerse;
+                });
+            } else if (chapterOnlyMatch) {
+                const book = chapterOnlyMatch[1];
+                const chapter = parseInt(chapterOnlyMatch[2], 10);
+                const maxVerse = (BIBLE_VERSE_COUNTS[book] && BIBLE_VERSE_COUNTS[book][chapter]) || 0;
+
                 if (maxVerse > 0) {
-                    rangeHintHtml = ` <span class="range-hint">💡 ${book}${chapter}장은 ${maxVerse}절까지 있습니다 (${book}${chapter}:${startVerse}~${maxVerse})</span>`;
+                    hintMessage = `💡 ${book}${chapter}장 전체 (총 ${maxVerse}절)`;
                 }
-            } else if (chapterMatch) {
-                const book = chapterMatch[1];
-                const chapter = parseInt(chapterMatch[2], 10);
-                const maxVerse = getMaxVerseCount(book, chapter);
-                if (maxVerse > 0) {
-                    rangeHintHtml = ` <span class="range-hint">💡 ${book}${chapter}장 전체 (총 ${maxVerse}절)</span>`;
-                }
+
+                filtered = BIBLE.filter(row => {
+                    return row[0] === book && row[1] === chapter;
+                });
+            } else {
+                // 3) 일반 텍스트 및 특정 절 검색
+                filtered = BIBLE.filter(row => {
+                    const text = row[versionIdxMap[currentVersion]] || "";
+                    const ref1 = `${row[0]}${row[1]}:${row[2]}`.toLowerCase();
+                    const ref2 = `${row[0]}${row[1]};${row[2]}`.toLowerCase();
+                    const ref3 = `${row[0]}${row[1]}.${row[2]}`.toLowerCase();
+
+                    return text.toLowerCase().includes(cleanQ) || 
+                           ref1.includes(cleanQ) || 
+                           ref2.includes(cleanQ) || 
+                           ref3.includes(cleanQ);
+                });
             }
 
-            statsDiv.innerHTML = `<span>검색 결과: ${filtered.length}건</span>${rangeHintHtml}`;
+            // 상단 결과 상태 바 출력
+            if (hintMessage) {
+                statsDiv.innerHTML = `<span>검색 결과: ${filtered.length}건</span> <span class="range-hint">${hintMessage}</span>`;
+            } else {
+                statsDiv.textContent = `검색 결과: ${filtered.length}건`;
+            }
 
             if (filtered.length === 0) {
                 resultsDiv.innerHTML = `<div style="text-align:center; padding: 40px 10px; color: var(--text-muted); font-size: 0.95rem;">검색 결과가 없습니다.</div>`;
@@ -577,7 +586,7 @@
                 const refText = `${row[0]} ${row[1]}:${row[2]}`;
                 const textVal = row[versionIdxMap[currentVersion]] || "";
                 
-                let bodyHtml = highlightMatch(textVal, q);
+                let bodyHtml = highlightMatch(textVal, q.replace('-', ''));
                 
                 if (compareMode) {
                     bodyHtml += `
