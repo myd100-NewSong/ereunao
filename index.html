@@ -367,15 +367,85 @@
     <div id="toast">✅ 복사되었습니다!</div>
 
     <script>
-        // 데이터 형태: [줄임말, 장, 절, 개역개정, 개역한글, 쉬운성경, 새번역, 데이터유효여부]
-        const BIBLE = [
-            ["창", 1, 1, "태초에 하나님이 천지를 창조하시니라", "태초에 하나님이 천지를 창조하시니라", "<세계의 시작> 태초에 하나님께서 하늘과 땅을 창조하셨습니다.", "태초에 하나님이 천지를 창조하셨다.", 1],
-            ["창", 1, 2, "땅이 혼돈하고 공허하며 흑암이 깊음 위에 있고 하나님의 영은 수면 위에 운행하시니라", "땅이 혼돈하고 공허하며 흑암이 깊음 위에 있고 하나님의 신은 수면에 운행하시니라", "그런데 그 땅은 지금처럼 짜임새 있는 모습이 아니었고, 생물 하나 없이 텅 비어 있었습니다. 어둠이 깊은 바다를 덮고 있었고, 하나님의 영은 물 위에서 움직이고 계셨습니다.", "땅이 혼돈하고 공허하며, 어둠이 깊음 위에 있고, 하나님의 영은 물 위에 움직이고 계셨다.", 1],
-            ["창", 1, 3, "하나님이 이르시되 빛이 있으라 하시니 빛이 있었고", "하나님이 가라사대 빛이 있으라 하시매 빛이 있었고", "그 때에 하나님께서 말씀하셨습니다. “빛이 생겨라!” 그러자 빛이 생겼습니다.", "하나님이 말씀하시기를 \"빛이 생겨라\" 하시니, 빛이 생겼다.", 1],
-            ["창", 1, 4, "빛이 하나님이 보시기에 좋았더라 하나님이 빛과 어둠을 나누사", "빛이 하나님의 보시기에 좋았더라 하나님이 빛과 어두움을 나누사", "그 빛이 하나님 보시기에 좋았습니다. 하나님께서 빛과 어둠을 나누셨습니다.", "그 빛이 하나님 보시기에 좋았다. 하나님이 빛과 어둠을 나누셔서,", 1],
-            ["창", 1, 5, "하나님이 빛을 낮이라 부르시고 어둠을 밤이라 부르시니라 저녁이 되고 아침이 되니 이는 첫째 날이니라", "하나님이 빛을 낮이라 칭하시고 어두움을 밤이라 칭하시니라 저녁이 되며 아침이 되니 이는 첫째 날이니라", "하나님은 빛을 “낮”이라 부르시고, 어둠을 “밤”이라 부르셨습니다. 저녁이 지나고 아침이 되니, 이 날이 첫째 날이었습니다.", "빛을 낮이라 부르시고, 어둠을 밤이라 부르셨다. 저녁이 되고 아침이 되니, 첫째 날이 지나갔다.", 1],
-            ["요", 3, 16, "하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니 이는 그를 믿는 자마다 멸망하지 않고 영생을 얻게 하려 하심이라", "하나님이 세상을 이처럼 사랑하사 독생자를 주셨으니 이는 저를 믿는 자마다 멸망치 않고 영생을 얻게 하려 하심이니라", "이와 같이 하나님께서는 세상을 사랑하여 독생자를 주셨습니다. 이는 누구든지 세상의 아들을 믿는 사람은 멸망하지 않고 영원한 생명을 얻게 하려 하심입니다.", "하나님이 세상을 이처럼 사랑하셔서 외아들을 주셨으니, 이는 그를 믿는 사람마다 멸망하지 않고 영생을 얻게 하려 하심이다.", 1]
-        ];
+        // 성경 66권 각 장별 실제 절수 데이터베이스 (샘플 데이터와 무관하게 실제 총 절수 안내)
+        const BIBLE_VERSE_COUNTS = {
+            "창": [31,25,24,26,32,22,24,22,29,32,32,20,18,24,21,16,27,33,38,18,34,24,20,67,34,35,46,22,35,43,55,32,20,31,29,43,36,30,23,23,57,38,34,34,28,34,31,22,33,26],
+            "출": [22,25,22,31,23,30,25,32,35,29,10,51,22,31,27,36,16,27,25,26,36,31,33,18,40,37,21,43,46,38,18,35,23,35,35,38,29,31,43,38],
+            "레": [17,16,17,35,19,30,38,36,24,20,47,8,59,57,33,34,16,30,37,27,24,33,44,23,55,46,34],
+            "민": [54,34,51,49,31,27,89,26,23,36,35,16,33,45,41,50,13,32,22,29,35,41,30,25,18,65,23,31,40,16,54,42,56,29,13,13],
+            "신": [46,37,29,49,33,25,26,20,29,22,32,32,18,29,23,22,20,22,21,20,23,30,25,22,19,19,26,68,29,20,30,52,29,12],
+            "수": [18,24,17,24,15,27,26,35,27,43,23,24,33,15,63,10,18,28,51,9,45,34,16,33],
+            "삿": [36,23,31,24,31,40,25,35,57,18,40,15,25,20,20,31,13,31,30,48,25],
+            "롯": [22,23,18,22],
+            "삼상": [28,36,21,22,12,21,17,22,27,27,15,25,23,52,35,23,58,30,24,42,15,23,29,22,44,25,12,25,11,31,13],
+            "삼하": [27,32,39,12,25,23,29,18,13,19,27,31,39,33,37,23,29,33,43,26,22,51,39,25],
+            "열상": [53,46,28,34,18,38,51,66,28,29,43,33,34,31,34,34,24,46,21,43,29,53],
+            "열하": [18,25,27,44,27,33,20,29,37,36,21,21,25,29,38,20,41,37,37,21,26,20,37,20,30],
+            "대상": [54,55,24,43,26,81,40,40,44,14,47,40,14,17,29,43,27,17,19,8,30,19,32,31,31,32,34,21,30],
+            "대하": [17,18,17,22,14,42,22,18,31,19,23,16,22,15,19,14,19,34,11,37,20,12,21,27,28,23,9,27,36,27,21,33,25,33,27,23],
+            "스": [11,70,13,24,17,22,28,36,15,44],
+            "느": [11,20,32,23,19,19,73,18,38,39,36,47,31],
+            "에": [22,23,15,14,14,14,10,17,32,3],
+            "욥": [22,13,26,21,27,30,21,22,35,22,20,25,28,22,35,22,16,21,29,29,34,30,17,25,6,14,23,28,25,31,40,22,33,37,16,33,24,41,30,24,34,17],
+            "시": [6,12,8,8,12,10,17,9,20,18,7,8,6,7,5,11,15,50,14,9,13,31,6,10,22,12,14,9,11,12,24,11,22,22,28,12,40,22,13,17,13,11,5,26,17,11,9,14,20,23,19,9,6,7,23,13,11,11,17,12,8,12,11,10,13,20,7,35,36,5,24,20,28,23,10,12,20,72,13,19,16,8,18,12,13,17,7,18,52,17,16,15,5,23,11,13,12,9,9,5,8,28,22,35,45,48,43,13,31,7,10,10,9,8,18,19,2,29,176,7,8,9,4,8,5,6,5,6,8,8,3,18,3,3,21,13,20,9,9,5,7,8,10,15,6,6,7,5,6,6],
+            "잠": [33,22,35,27,23,35,27,36,18,32,31,28,25,35,33,33,28,24,29,30,31,29,35,34,28,28,27,27,27,33,31],
+            "전": [18,26,22,16,20,12,29,17,18,20,10,14],
+            "아": [17,17,11,16,16,13,13,14],
+            "사": [31,22,26,6,30,13,25,22,21,34,16,6,22,32,9,14,14,7,25,6,17,25,18,23,12,21,13,29,24,33,18,20,24,17,10,22,24,22,22,31,29,25,28,28,25,13,15,22,26,11,23,15,12,17,13,12,21,14,21,22,11,12,19,12,25,24],
+            "렘": [19,37,25,31,31,30,34,22,26,25,23,17,27,22,21,21,27,23,15,18,14,30,40,10,38,24,22,17,32,24,40,44,26,22,19,32,21,28,18,16,18,22,13,30,5,28,7,47,39,46,64,34],
+            "애": [22,22,66,22,22],
+            "겔": [28,10,27,17,17,14,27,18,11,22,25,28,23,23,8,63,24,32,14,49,32,31,49,27,17,21,36,26,21,26,18,32,33,31,15,38,28,23,29,49,26,20,27,31,25,24,23,35],
+            "단": [21,49,30,37,31,28,28,27,27,21,45,13],
+            "호": [11,23,5,19,15,11,16,14,17,15,12,14,16,9],
+            "욜": [20,32,21],
+            "암": [15,16,15,13,27,14,17,14,15],
+            "오": [21],
+            "요나": [17,10,10,11],
+            "미": [16,13,12,13,15,16,20],
+            "나": [15,13,19],
+            "합": [17,20,19],
+            "습": [18,15,20],
+            "학": [15,23],
+            "슥": [21,13,10,14,11,15,14,23,17,12,17,14,9,21],
+            "말": [14,17,18,6],
+            "마": [25,23,17,25,48,34,29,34,38,42,30,50,58,36,39,28,27,35,30,34,46,46,39,51,46,75,66,20],
+            "막": [45,28,35,41,43,56,37,38,50,52,33,44,37,72,47,20],
+            "눅": [80,52,38,44,39,49,50,56,62,42,54,59,35,35,32,31,37,43,48,47,38,71,56,53],
+            "요": [51,25,36,54,47,71,53,59,41,42,57,50,38,31,27,33,26,40,42,31,25],
+            "행": [26,47,26,37,42,15,60,40,43,48,30,25,52,28,41,40,34,28,41,38,40,30,35,27,27,32,44,31],
+            "롬": [32,29,31,25,21,23,25,39,33,21,36,21,14,23,33,27],
+            "고전": [31,16,23,21,13,20,40,13,27,33,34,31,13,40,58,24],
+            "고후": [24,17,18,18,21,18,16,24,15,18,33,21,13],
+            "갈": [24,21,29,31,26,18],
+            "엡": [23,22,21,32,33,24],
+            "빌": [30,30,21,23],
+            "골": [29,23,25,18],
+            "살전": [10,20,13,18,28],
+            "살후": [12,17,18],
+            "딤전": [20,15,16,16,25,21],
+            "딤후": [18,26,17,22],
+            "딛": [16,15,15],
+            "몬": [25],
+            "히": [14,18,19,16,14,20,28,13,28,39,40,29,25],
+            "야": [27,26,18,17,20],
+            "벧전": [25,25,22,19,14],
+            "벧후": [21,22,18],
+            "요일": [10,29,24,21,21],
+            "요이": [13],
+            "요삼": [15],
+            "유": [25],
+            "계": [20,29,22,11,14,17,17,13,21,11,19,17,18,20,8,21,18,24,21,15,27,21]
+        };
+
+        // 성경 장의 실제 최대 절수를 구하는 함수
+        function getMaxVerseCount(book, chapter) {
+            if (BIBLE_VERSE_COUNTS[book] && BIBLE_VERSE_COUNTS[book][chapter - 1]) {
+                return BIBLE_VERSE_COUNTS[book][chapter - 1];
+            }
+            // 실제 데이터베이스에 없는 경우 현재 BIBLE 배열에서 최대 절수 탐색 fallback
+            const chapterVerses = BIBLE.filter(r => r[0] === book && r[1] === chapter);
+            return chapterVerses.length > 0 ? Math.max(...chapterVerses.map(r => r[2])) : 0;
+        }
 
         let currentVersion = 'nkrv';
         let compareMode = false;
@@ -431,12 +501,12 @@
         }
 
         function renderResults() {
-            const rawQ = document.getElementById('query').value.trim();
+            const q = document.getElementById('query').value.trim();
             const resultsDiv = document.getElementById('results');
             const statsDiv = document.getElementById('stats');
             const clearBtn = document.getElementById('clear-btn');
             
-            if (rawQ) {
+            if (q) {
                 clearBtn.classList.add('show');
             } else {
                 clearBtn.classList.remove('show');
@@ -444,57 +514,56 @@
 
             resultsDiv.innerHTML = '';
 
-            if (!rawQ) {
+            if (!q) {
                 statsDiv.textContent = '';
                 return;
             }
 
-            const qLower = rawQ.toLowerCase().replace(/\s+/g, '');
+            const qClean = q.replace(/\s+/g, '').toLowerCase();
 
-            // 1. "창1장" 또는 "창1" (장 전체 검색) 패턴 파싱
-            const chapterOnlyMatch = rawQ.match(/^([가-힣]+)\s*(\d+)(?:장)?$/);
+            const filtered = BIBLE.filter(row => {
+                const text = row[versionIdxMap[currentVersion]] || "";
+                const ref1 = `${row[0]}${row[1]}:${row[2]}`.toLowerCase();
+                const ref2 = `${row[0]}${row[1]};${row[2]}`.toLowerCase();
+                const ref3 = `${row[0]}${row[1]}.${row[2]}`.toLowerCase();
+                const refChapterOnly = `${row[0]}${row[1]}`.toLowerCase();
+                const refChapterJang = `${row[0]}${row[1]}장`.toLowerCase();
 
-            let filtered = [];
+                // 텍스트 검색, 장/절 검색, 장 전체 검색(예: 창1장)
+                return text.toLowerCase().includes(qClean) || 
+                       ref1.includes(qClean) || 
+                       ref2.includes(qClean) || 
+                       ref3.includes(qClean) || 
+                       refChapterOnly === qClean || 
+                       refChapterJang === qClean;
+            });
 
-            if (chapterOnlyMatch) {
-                const book = chapterOnlyMatch[1];
-                const chapter = parseInt(chapterOnlyMatch[2], 10);
-                filtered = BIBLE.filter(row => row[0] === book && row[1] === chapter);
-            } else {
-                filtered = BIBLE.filter(row => {
-                    const text = row[versionIdxMap[currentVersion]] || "";
-                    const ref1 = `${row[0]}${row[1]}:${row[2]}`.toLowerCase();
-                    const ref2 = `${row[0]}${row[1]};${row[2]}`.toLowerCase();
-                    const ref3 = `${row[0]}${row[1]}.${row[2]}`.toLowerCase();
-                    const refSpace = `${row[0]} ${row[1]}:${row[2]}`.toLowerCase();
+            // 힌트 분석 (실제 66권 절수 데이터베이스 기준)
+            let rangeHintHtml = '';
+            
+            // 패턴 1: 범위 검색 (예: 창1:1-, 창 1:1-5, 창1:1~)
+            const rangeMatch = q.match(/^([가-힣]+)\s*(\d+)[:;.](\d+)[-~]?$/);
+            // 패턴 2: 장 검색 (예: 창1장, 창 1)
+            const chapterMatch = q.match(/^([가-힣]+)\s*(\d+)(장)?$/);
 
-                    return text.toLowerCase().includes(qLower) || 
-                           ref1.includes(qLower) || 
-                           ref2.includes(qLower) || 
-                           ref3.includes(qLower) || 
-                           refSpace.includes(qLower);
-                });
-            }
-
-            statsDiv.textContent = `검색 결과: ${filtered.length}건`;
-
-            // 2. 구절 범위 힌트 표시 (예: 창1:1- 입력 시 해당 장의 최대 절수 안내)
-            const rangeMatch = rawQ.match(/^([가-힣]+)\s*(\d+)[:;.](\d+)-$/);
             if (rangeMatch) {
                 const book = rangeMatch[1];
                 const chapter = parseInt(rangeMatch[2], 10);
-                const startVerse = parseInt(rangeMatch[3], 10);
-                const chapterVerses = BIBLE.filter(r => r[0] === book && r[1] === chapter);
-                if (chapterVerses.length > 0) {
-                    const maxVerse = Math.max(...chapterVerses.map(r => r[2]));
-                    statsDiv.innerHTML = `<span>검색 결과: ${filtered.length}건</span> <span class="range-hint">💡 ${book}${chapter}장은 ${maxVerse}절까지 있습니다 (${book}${chapter}:${startVerse}~${maxVerse})</span>`;
+                const startVerse = rangeMatch[3];
+                const maxVerse = getMaxVerseCount(book, chapter);
+                if (maxVerse > 0) {
+                    rangeHintHtml = ` <span class="range-hint">💡 ${book}${chapter}장은 ${maxVerse}절까지 있습니다 (${book}${chapter}:${startVerse}~${maxVerse})</span>`;
                 }
-            } else if (chapterOnlyMatch && filtered.length > 0) {
-                const book = chapterOnlyMatch[1];
-                const chapter = parseInt(chapterOnlyMatch[2], 10);
-                const maxVerse = Math.max(...filtered.map(r => r[2]));
-                statsDiv.innerHTML = `<span>검색 결과: ${filtered.length}건</span> <span class="range-hint">💡 ${book}${chapter}장 전체 (1~${maxVerse}절)</span>`;
+            } else if (chapterMatch) {
+                const book = chapterMatch[1];
+                const chapter = parseInt(chapterMatch[2], 10);
+                const maxVerse = getMaxVerseCount(book, chapter);
+                if (maxVerse > 0) {
+                    rangeHintHtml = ` <span class="range-hint">💡 ${book}${chapter}장 전체 (총 ${maxVerse}절)</span>`;
+                }
             }
+
+            statsDiv.innerHTML = `<span>검색 결과: ${filtered.length}건</span>${rangeHintHtml}`;
 
             if (filtered.length === 0) {
                 resultsDiv.innerHTML = `<div style="text-align:center; padding: 40px 10px; color: var(--text-muted); font-size: 0.95rem;">검색 결과가 없습니다.</div>`;
@@ -508,7 +577,7 @@
                 const refText = `${row[0]} ${row[1]}:${row[2]}`;
                 const textVal = row[versionIdxMap[currentVersion]] || "";
                 
-                let bodyHtml = highlightMatch(textVal, rawQ);
+                let bodyHtml = highlightMatch(textVal, q);
                 
                 if (compareMode) {
                     bodyHtml += `
@@ -536,25 +605,4 @@
                 resultsDiv.appendChild(card);
             });
         }
-
-        document.getElementById('query').addEventListener('input', renderResults);
-        document.getElementById('clear-btn').addEventListener('click', () => {
-            const input = document.getElementById('query');
-            input.value = '';
-            input.focus();
-            renderResults();
-        });
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                const input = document.getElementById('query');
-                input.value = '';
-                renderResults();
-            }
-        });
-
-        // 초기 렌더링
-        renderResults();
-    </script>
-</body>
-</html>
+<!-- ... existing code -->
