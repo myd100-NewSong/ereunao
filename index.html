@@ -412,6 +412,11 @@
         .cmt-foot-btn { flex: 1; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); font-size: 0.88rem; font-weight: 700; cursor: pointer; }
         .cmt-foot-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
         .cmt-note { flex: 0 0 auto; text-align: center; font-size: 0.7rem; color: var(--text-muted); padding: 4px 18px 10px; }
+
+        .input-wrap { position: relative; flex: 1; display: flex; min-width: 0; }
+        .ghost { position: absolute; left: 0; top: 0; bottom: 0; display: flex; align-items: center; white-space: pre; pointer-events: none; overflow: hidden; max-width: 100%; }
+        #ghost-typed { visibility: hidden; }
+        #ghost-tail { color: var(--text-muted); opacity: 0.65; font-weight: 400; pointer-events: auto; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -437,12 +442,15 @@
                 <div class="search-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 </div>
-                <input type="text" id="query" placeholder="성경 검색 (예: 창1:1, 요3;16, 사랑)" autofocus autocomplete="off">
+                <div class="input-wrap">
+                    <input type="text" id="query" placeholder="성경 검색 (예: 창1:1, 요3;16, 사랑)" autofocus autocomplete="off">
+                    <div id="ghost" class="ghost" aria-hidden="true"><span id="ghost-typed"></span><span id="ghost-tail"></span></div>
+                </div>
                 <button id="clear-btn" class="clear-btn" title="지우기 (Esc)" aria-label="입력 지우기">✕</button>
             </div>
         </div>
 
-        <div class="version-badge">1.1</div>
+        <div class="version-badge">1.2</div>
 
         <div class="stats-bar" id="stats"></div>
         <div id="results" class="card-list"></div>
@@ -665,6 +673,7 @@
             clearTimeout(searchTimer);
             searchTimer = null;
             toggleClearBtn();
+            updateGhost();
             currentIndex = -1;
             defaultIndex = 0;
 
@@ -1114,6 +1123,68 @@
 
         const CMP = ['nkrv', 'easy', 'nksv'];
         function cmpKeys() { return CMP.includes(currentVersion) ? CMP : [currentVersion, ...CMP]; }
+
+        /* ---------- "요5:1-" 입력 시 마지막 절 번호를 희미하게 안내 ---------- */
+        const ghostEl = document.getElementById('ghost');
+        const ghostTyped = document.getElementById('ghost-typed');
+        const ghostTail = document.getElementById('ghost-tail');
+        const lastVerseCache = {};
+        let ghostSuffix = '';
+
+        try {   // 입력칸과 같은 글꼴로 맞춰서 글자 위치가 겹치게 함
+            const cs = getComputedStyle(input);
+            ghostEl.style.fontFamily = cs.fontFamily;
+            ghostEl.style.fontSize = cs.fontSize;
+            ghostEl.style.fontWeight = cs.fontWeight;
+            ghostEl.style.letterSpacing = cs.letterSpacing;
+        } catch (e) {}
+
+        function lastVerse(book, ch) {
+            const k = book + '|' + ch;
+            if (k in lastVerseCache) return lastVerseCache[k];
+            let max = 0;
+            for (const r of BIBLE) if (r[0] === book && r[1] === ch && r[2] > max) max = r[2];
+            if (BIBLE.length) lastVerseCache[k] = max;
+            return max;
+        }
+
+        function updateGhost() {
+            ghostSuffix = '';
+            const v = input.value;
+            const m = v.match(/^([가-힣]+)\s*(\d+)\s*[:;.：；]\s*(\d+)\s*[-~]\s*(\d*)$/);
+            if (m && BIBLE.length) {
+                const b = REVERSE_BOOK_MAP[m[1]] || m[1];
+                if (BOOK_MAP[b]) {
+                    const last = String(lastVerse(b, parseInt(m[2], 10)));
+                    if (last !== '0' && last.startsWith(m[4]) && last !== m[4] && parseInt(last, 10) >= parseInt(m[3], 10)) {
+                        ghostSuffix = last.slice(m[4].length);
+                    }
+                }
+            }
+            ghostTyped.textContent = ghostSuffix ? v : '';
+            ghostTail.textContent = ghostSuffix;
+        }
+
+        function acceptGhost() {
+            if (!ghostSuffix) return false;
+            input.value += ghostSuffix;
+            search();
+            return true;
+        }
+
+        input.addEventListener('input', updateGhost);
+        // Tab, →(맨 끝에서), Enter 로 희미한 글자를 확정 / 모바일은 희미한 글자를 터치
+        input.addEventListener('keydown', (e) => {
+            if (!ghostSuffix) return;
+            const atEnd = input.selectionStart === input.value.length;
+            if (e.key === 'Tab' || e.key === 'Enter' || (e.key === 'ArrowRight' && atEnd)) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                acceptGhost();
+            }
+        }, true);
+        ghostTail.addEventListener('click', () => { acceptGhost(); input.focus(); });
+        ensureVersions(['nkrv']).then(updateGhost).catch(() => {});
 
         /* ---------- 이전에 설치된 서비스 워커/캐시 정리 ---------- */
 
