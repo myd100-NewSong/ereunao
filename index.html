@@ -431,6 +431,8 @@
         .pg.active { background: var(--accent); border-color: var(--accent); color: #fff; }
         .pg:disabled { opacity: 0.35; cursor: default; }
         .pg-gap { color: var(--text-muted); }
+        .below-search { text-align: center; margin: 4px 0 10px; }
+        .below-search .desc { margin: 0 0 8px; }
     </style>
 </head>
 <body>
@@ -447,8 +449,6 @@
                 <button class="v-btn" id="btn-bareun" onclick="switchVersion('bareun')">바른</button>
             </div>
 
-            <p class="desc">구절(창1:1, 창1;1, 창1.1) 또는 단어를 입력하세요.</p>
-            <button type="button" id="compare-btn" class="compare-btn" onclick="toggleCompare()">📚 역본 비교 ON</button>
         </header>
 
         <div class="search-container">
@@ -464,7 +464,12 @@
             </div>
         </div>
 
-        <div class="version-badge">1.2.1</div>
+        <div class="version-badge">1.2.2</div>
+
+        <div class="below-search">
+            <p class="desc">구절(창1:1, 창1;1, 창1.1) 또는 단어를 입력하세요.</p>
+            <button type="button" id="compare-btn" class="compare-btn" onclick="toggleCompare()">📚 역본 비교 ON</button>
+        </div>
 
         <div class="stats-bar" id="stats"></div>
         <div id="results" class="card-list"></div>
