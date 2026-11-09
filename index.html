@@ -417,6 +417,20 @@
         .ghost { position: absolute; left: 0; top: 0; bottom: 0; display: flex; align-items: center; white-space: pre; pointer-events: none; overflow: hidden; max-width: 100%; }
         #ghost-typed { visibility: hidden; }
         #ghost-tail { color: var(--text-muted); opacity: 0.65; font-weight: 400; pointer-events: auto; cursor: pointer; }
+
+        .kw-tabs { display: flex; gap: 8px; margin: 8px 0 10px; scroll-margin-top: 140px; }
+        .kw-tab { flex: 1; padding: 10px 0; border-radius: 12px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text-secondary); font-weight: 700; font-size: 0.95rem; cursor: pointer; }
+        .kw-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .kw-tab:disabled { opacity: 0.4; cursor: default; }
+        .kw-chips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 12px; -webkit-overflow-scrolling: touch; }
+        .kw-chip { flex: 0 0 auto; padding: 5px 11px; border-radius: 16px; border: 1px solid var(--border); background: transparent; color: var(--text-secondary); font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+        .kw-chip.active { background: var(--accent-soft); color: var(--accent-text); border-color: var(--accent); }
+        .card-no { color: var(--text-muted); font-weight: 700; font-size: 0.92rem; margin-right: 6px; }
+        .pager { display: flex; justify-content: center; align-items: center; gap: 6px; margin: 20px 0 10px; flex-wrap: wrap; }
+        .pg { min-width: 38px; height: 38px; padding: 0 8px; border-radius: 10px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text-secondary); font-weight: 700; cursor: pointer; }
+        .pg.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .pg:disabled { opacity: 0.35; cursor: default; }
+        .pg-gap { color: var(--text-muted); }
     </style>
 </head>
 <body>
@@ -450,7 +464,7 @@
             </div>
         </div>
 
-        <div class="version-badge">1.2</div>
+        <div class="version-badge">1.2.1</div>
 
         <div class="stats-bar" id="stats"></div>
         <div id="results" class="card-list"></div>
@@ -773,57 +787,89 @@
             return true;
         }
 
+        const PAGE_SIZE = 10;
+        const BOOK_ORDER = Object.keys(BOOK_MAP);
+        let kw = null;
+
         function handleKeywordSearch(query) {
             const keywords = query.split(/\s+/).filter(Boolean);
-            const regexes = keywords.map(kw => buildRegex(escapeRegExp(kw), 'i'));
-
+            const regexes = keywords.map(k => buildRegex(escapeRegExp(k), 'i'));
             const matched = BIBLE.filter(item => regexes.every(re => re.test(item[vIndex])));
-
-            const total = matched.length;
             const verLabel = VER_CONFIG[currentVersion].name;
 
-            if (total === 0) {
+            if (matched.length === 0) {
+                kw = null;
                 resultsEl.innerHTML = `<div class="empty-state">❌ [${verLabel}] '${escapeHtml(query)}' 검색 결과가 없습니다.</div>`;
                 statsEl.innerHTML = '';
                 renderedCards = [];
                 return;
             }
+            const otN = matched.filter(m => m[8] === 1).length;
+            kw = { matched, keywords, verLabel, otN, ntN: matched.length - otN, ot: otN > 0, book: null, page: 1 };
+            renderKw(false);
+        }
 
-            const otMatches = matched.filter(m => m[8] === 1);
-            const ntMatches = matched.filter(m => m[8] === 0);
+        function kwTab(ot) { kw.ot = ot; kw.book = null; kw.page = 1; renderKw(true); }
+        function kwBook(b) { kw.book = b || null; kw.page = 1; renderKw(true); }
+        function kwPage(p) { kw.page = p; renderKw(true); }
 
-            statsEl.innerHTML = `<span>${verLabel} <strong>${total}</strong>건</span><span>구약 ${otMatches.length} · 신약 ${ntMatches.length}</span>`;
+        function pagerHtml(cur, total) {
+            if (total <= 1) return '';
+            const keep = [...new Set([1, total, cur - 1, cur, cur + 1])].filter(n => n >= 1 && n <= total).sort((a, b) => a - b);
+            let h = `<div class="pager"><button type="button" class="pg" ${cur === 1 ? 'disabled' : ''} onclick="kwPage(${cur - 1})">‹</button>`;
+            let prev = 0;
+            keep.forEach(n => {
+                if (n - prev === 2) h += `<button type="button" class="pg" onclick="kwPage(${prev + 1})">${prev + 1}</button>`;
+                else if (n - prev > 2) h += '<span class="pg-gap">…</span>';
+                h += `<button type="button" class="pg${n === cur ? ' active' : ''}" onclick="kwPage(${n})">${n}</button>`;
+                prev = n;
+            });
+            return h + `<button type="button" class="pg" ${cur === total ? 'disabled' : ''} onclick="kwPage(${cur + 1})">›</button></div>`;
+        }
 
-            const displayList = [...otMatches.slice(0, 15), ...ntMatches.slice(0, 15)];
+        function renderKw(scroll) {
+            if (!kw) return;
+            const list = kw.matched.filter(m => (m[8] === 1) === kw.ot);
+            const counts = {};
+            list.forEach(m => { counts[m[0]] = (counts[m[0]] || 0) + 1; });
+            const shown = kw.book ? list.filter(m => m[0] === kw.book) : list;
+            const pages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
+            kw.page = Math.min(Math.max(kw.page, 1), pages);
+            const start = (kw.page - 1) * PAGE_SIZE;
+            const items = shown.slice(start, start + PAGE_SIZE);
+            const verLabel = kw.verLabel;
+
+            statsEl.innerHTML = `<span>${verLabel} <strong>${kw.matched.length}</strong>건</span><span>${shown.length ? (start + 1) + '–' + (start + items.length) + ' / ' + shown.length : '0건'}</span>`;
+
+            let html = `<div class="kw-tabs" id="kw-tabs">
+                <button type="button" class="kw-tab${kw.ot ? ' active' : ''}" ${kw.otN ? '' : 'disabled'} onclick="kwTab(true)">📖 구약 ${kw.otN}</button>
+                <button type="button" class="kw-tab${kw.ot ? '' : ' active'}" ${kw.ntN ? '' : 'disabled'} onclick="kwTab(false)">✝️ 신약 ${kw.ntN}</button>
+            </div>`;
+            html += `<div class="kw-chips"><button type="button" class="kw-chip${kw.book ? '' : ' active'}" onclick="kwBook('')">전체 ${list.length}</button>` +
+                BOOK_ORDER.filter(b => counts[b]).map(b => `<button type="button" class="kw-chip${kw.book === b ? ' active' : ''}" onclick="kwBook('${b}')">${BOOK_MAP[b]} ${counts[b]}</button>`).join('') + '</div>';
+
             renderedCards = [];
-
-            let html = '';
-            let currentSection = '';
-
-            displayList.forEach((item, idx) => {
-                const isOt = item[8] === 1;
-                const sectionName = isOt ? '📖 구약 성경' : '✝️ 신약 성경';
-
-                if (currentSection !== sectionName) {
-                    currentSection = sectionName;
-                    html += `<div class="section-header">${sectionName}</div>`;
-                }
-
+            currentIndex = -1;
+            defaultIndex = 0;
+            items.forEach((item, idx) => {
                 const ref = `${BOOK_MAP[item[0]]} ${item[1]}:${item[2]}`;
                 renderedCards.push({ ref, text: item[vIndex], ver: currentVersion, book: item[0], chapter: item[1], v1: item[2], v2: item[2] });
-
                 html += `
                     <div class="card" id="card-${idx}" onclick="copyByIndex(${idx})">
                         <div class="card-top">
-                            <span class="card-ref">${escapeHtml(ref)}</span>
+                            <span class="card-ref"><span class="card-no">${start + idx + 1}.</span>${escapeHtml(ref)}</span>
                             <span class="card-actions"><button type="button" class="cmt-btn" onclick="event.stopPropagation(); openCommentary(${idx})">📖 주석</button><span class="copy-pill">${verLabel}</span></span>
                         </div>
-                        <div class="card-body">${highlightHtml(item[vIndex], keywords)}</div>
+                        <div class="card-body">${highlightHtml(item[vIndex], kw.keywords)}</div>
                     </div>
                 `;
             });
-
+            html += pagerHtml(kw.page, pages);
             resultsEl.innerHTML = html;
+            if (scroll) {
+                const el = document.getElementById('kw-tabs');
+                if (el && el.scrollIntoView) el.scrollIntoView({ block: 'start' });
+            }
         }
 
         input.addEventListener('input', scheduleSearch);
