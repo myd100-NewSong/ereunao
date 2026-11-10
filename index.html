@@ -6,6 +6,9 @@
     <title>ἐρευνάω - Searched The Scriptures</title>
     
     <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" rel="stylesheet">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -57,7 +60,7 @@
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, sans-serif;
+            font-family: "Gowun Dodum", -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", Roboto, sans-serif;
             -webkit-tap-highlight-color: transparent;
         }
 
@@ -469,7 +472,7 @@
 
         <div class="meta-row">
             <button type="button" id="compare-btn" class="compare-btn" onclick="toggleCompare()">📚 역본 비교 ON</button>
-            <div class="version-badge">1.2.5</div>
+            <div class="version-badge">1.2.6</div>
         </div>
 
         <div class="stats-bar" id="stats"></div>
@@ -714,7 +717,12 @@
 
             const match = normalized.match(/^([가-힣]+)\s*(\d+)(?:[:\s]|장\s*)(\d+)(?:절)?(?:\s*[-]\s*(\d+)(?:절)?)?$/);
 
-            const need = (match && compareMode) ? cmpKeys() : [currentVersion];
+            // "창44", "창44장"처럼 장만 입력하면 그 장 전체를 보여 줌
+            const chap = match ? null : normalized.match(/^([가-힣]+)\s*(\d+)\s*[장편]?$/);
+            const chapBook = chap ? (REVERSE_BOOK_MAP[chap[1]] || chap[1]) : null;
+            const isChap = !!(chap && BOOK_MAP[chapBook]);
+
+            const need = ((match || isChap) && compareMode) ? cmpKeys() : [currentVersion];
             if (!BIBLE.length || need.some(k => !loaded[k])) {
                 resultsEl.innerHTML = '<div class="empty-state">⏳ 불러오는 중…</div>';
                 statsEl.innerHTML = '';
@@ -724,6 +732,10 @@
             }
             // 책 이름으로 인식되지 않으면 일반 키워드 검색으로 넘김
             if (match && handleVerseLookup(match)) return;
+            if (isChap) {
+                const mv = lastVerse(chapBook, parseInt(chap[2], 10));
+                if (mv > 0 && handleVerseLookup([null, chap[1], chap[2], '1', String(mv)])) return;
+            }
             handleKeywordSearch(rawInput);
         }
 
