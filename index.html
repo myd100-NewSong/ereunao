@@ -436,12 +436,13 @@
         .pg-gap { color: var(--text-muted); }
         .meta-row { display: flex; justify-content: space-between; align-items: center; margin: 0 4px; }
         .stats-bar:not(:empty) { margin-top: 6px; }
+        .meta-left { display: flex; align-items: center; gap: 8px; }
         .meta-row .compare-btn { margin: 0; padding: 5px 13px; }
         .meta-row .version-badge { margin: 0; padding: 0; }
         input::placeholder { font-size: 0.95rem; }
         .hist-btn { border: none; background: transparent; font-size: 1.15rem; padding: 4px 4px 4px 8px; cursor: pointer; line-height: 1; opacity: 0.8; }
         .hist-btn:hover { opacity: 1; }
-        .hist-panel { display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-lg); max-height: 52vh; overflow-y: auto; z-index: 60; padding: 6px 6px 8px; -webkit-overflow-scrolling: touch; }
+        .hist-panel { display: none; background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; box-shadow: var(--shadow-md); max-height: 52vh; overflow-y: auto; padding: 6px 6px 8px; -webkit-overflow-scrolling: touch; }
         .hist-panel.show { display: block; }
         .hist-head { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px 6px; font-weight: 700; font-size: 0.88rem; color: var(--text-secondary); }
         .hist-clear { border: none; background: transparent; color: var(--accent-text); font-weight: 700; font-size: 0.82rem; cursor: pointer; padding: 4px 6px; }
@@ -481,15 +482,17 @@
                     <div id="ghost" class="ghost" aria-hidden="true"><span id="ghost-typed"></span><span id="ghost-tail"></span></div>
                 </div>
                 <button id="clear-btn" class="clear-btn" title="지우기 (Esc)" aria-label="입력 지우기">✕</button>
-                <button type="button" id="hist-btn" class="hist-btn" title="검색 기록" aria-label="검색 기록">🕘</button>
             </div>
-            <div id="hist-panel" class="hist-panel" role="dialog" aria-label="검색 기록"></div>
         </div>
 
         <div class="meta-row">
-            <button type="button" id="compare-btn" class="compare-btn" onclick="toggleCompare()">📚 역본 비교 ON</button>
-            <div class="version-badge">1.2.6</div>
+            <div class="meta-left">
+                <button type="button" id="compare-btn" class="compare-btn" onclick="toggleCompare()">📚 역본 비교 ON</button>
+                <button type="button" id="hist-btn" class="compare-btn" onclick="toggleHist()">🕘 히스토리</button>
+            </div>
+            <div class="version-badge">1.2.7</div>
         </div>
+        <div id="hist-panel" class="hist-panel"></div>
 
         <div class="stats-bar" id="stats"></div>
         <div id="results" class="card-list"></div>
@@ -697,7 +700,7 @@
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                if (histPanel.classList.contains('show')) closeHist();
+                if (histPanel.style.display === 'block') closeHist();
                 else if (cmtOverlay.classList.contains('show')) closeCommentary();
                 else clearSearch();
             }
@@ -1268,13 +1271,11 @@
         ghostTail.addEventListener('click', () => { acceptGhost(); input.focus(); });
         ensureVersions(['nkrv']).then(updateGhost).catch(() => {});
 
-        /* ---------- 검색 기록 (🕘 버튼) ---------- */
+        /* ---------- 히스토리 (오늘 검색 최대 10개) ---------- */
         const HIST_KEY = 'ereunao.history';
-        const HIST_OLD_MAX = 10;   // 오늘 검색이 없거나 "이전 기록"으로 보여 줄 개수
-        const histBtn = document.getElementById('hist-btn');
+        const HIST_MAX = 10;
         const histPanel = document.getElementById('hist-panel');
         let hist = [];
-        let histOld = false;       // "이전 기록" 펼침 여부
         try { hist = JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); if (!Array.isArray(hist)) hist = []; } catch (e) { hist = []; }
 
         // 기기 시계 기준 오늘 날짜 (자정에 바뀜)
@@ -1284,11 +1285,11 @@
         }
         function saveHist() { try { localStorage.setItem(HIST_KEY, JSON.stringify(hist)); } catch (e) {} }
 
-        // 보관 규칙: ★ 고정과 오늘 검색은 전부, 오늘 이전 기록은 최근 10개만
+        // 보관: ★ 고정은 전부, 오늘 검색은 최근 10개, 오늘 이전 기록은 최근 10개
         function pruneHist() {
             const today = dayKey();
-            let n = 0;
-            hist = hist.filter(h => h.pin || h.d === today || ++n <= HIST_OLD_MAX);
+            let a = 0, b = 0;
+            hist = hist.filter(h => h.pin || (h.d === today ? ++a <= HIST_MAX : ++b <= HIST_MAX));
         }
         pruneHist();
         saveHist();
@@ -1302,38 +1303,37 @@
             hist.unshift({ q, pin: old ? old.pin : false, d: dayKey() });
             pruneHist();
             saveHist();
-            if (histPanel.classList.contains('show')) renderHist();
+            if (histPanel.style.display === 'block') renderHist();
         }
 
         function renderHist() {
             const today = dayKey();
             const items = hist.map((h, i) => ({ q: h.q, pin: h.pin, d: h.d, i }));
             const pinned = items.filter(h => h.pin);
-            const todays = items.filter(h => !h.pin && h.d === today);
-            const older = items.filter(h => !h.pin && h.d !== today).slice(0, HIST_OLD_MAX);
+            const todays = items.filter(h => !h.pin && h.d === today).slice(0, HIST_MAX);
+            // 오늘 검색이 하나도 없으면 이전 기록 최근 10개를 보여 줌
+            const recent = todays.length ? [] : items.filter(h => !h.pin && h.d !== today).slice(0, HIST_MAX);
             const row = h => `<div class="hist-row"><button type="button" class="hist-pin${h.pin ? ' on' : ''}" data-act="pin" data-i="${h.i}" aria-label="고정">${h.pin ? '★' : '☆'}</button><button type="button" class="hist-q" data-act="run" data-i="${h.i}">${escapeHtml(h.q)}</button><button type="button" class="hist-x" data-act="del" data-i="${h.i}" aria-label="삭제">✕</button></div>`;
-            let html = `<div class="hist-head"><span>🕘 검색 기록</span>${hist.some(h => !h.pin) ? '<button type="button" class="hist-clear" data-act="clear">★ 빼고 지우기</button>' : ''}</div>`;
-            if (!hist.length) {
+            let html = `<div class="hist-head"><span>🕘 ${todays.length ? '오늘 검색' : '최근 검색'}</span>${hist.some(h => !h.pin) ? '<button type="button" class="hist-clear" data-act="clear">★ 빼고 지우기</button>' : ''}</div>`;
+            if (!pinned.length && !todays.length && !recent.length) {
                 html += '<div class="hist-empty">아직 기록이 없어요.<br>Enter를 누르거나 구절을 복사하면 저장돼요.</div>';
             } else {
                 if (pinned.length) html += '<div class="hist-sec">★ 고정</div>' + pinned.map(row).join('');
-                if (todays.length) {
-                    html += '<div class="hist-sec">오늘</div>' + todays.map(row).join('');
-                    if (older.length) {
-                        if (histOld) html += '<div class="hist-sec">이전 기록</div>' + older.map(row).join('');
-                        html += `<button type="button" class="hist-more" data-act="more">${histOld ? '이전 기록 접기' : '이전 기록 ' + older.length + '개 보기'}</button>`;
-                    }
-                } else if (older.length) {
-                    html += '<div class="hist-sec">최근 기록</div>' + older.map(row).join('');
+                if (todays.length || recent.length) {
+                    if (pinned.length) html += `<div class="hist-sec">${todays.length ? '오늘' : '최근'}</div>`;
+                    html += (todays.length ? todays : recent).map(row).join('');
                 }
             }
             histPanel.innerHTML = html;
         }
 
-        function openHist() { histOld = false; renderHist(); histPanel.classList.add('show'); }
-        function closeHist() { histPanel.classList.remove('show'); }
+        function toggleHist() {
+            if (histPanel.style.display === 'block') { closeHist(); return; }
+            renderHist();
+            histPanel.style.display = 'block';
+        }
+        function closeHist() { histPanel.style.display = 'none'; }
 
-        histBtn.addEventListener('click', () => { histPanel.classList.contains('show') ? closeHist() : openHist(); });
         histPanel.addEventListener('click', (e) => {
             const b = e.target.closest('button');
             if (!b) return;
@@ -1348,12 +1348,10 @@
                 hist.splice(i, 1); saveHist(); renderHist();
             } else if (act === 'clear') {
                 hist = hist.filter(h => h.pin); saveHist(); renderHist();
-            } else if (act === 'more') {
-                histOld = !histOld; renderHist();
             }
         });
         document.addEventListener('click', (e) => {
-            if (!histPanel.classList.contains('show')) return;
+            if (histPanel.style.display !== 'block') return;
             if (e.target.closest && (e.target.closest('#hist-panel') || e.target.closest('#hist-btn'))) return;
             closeHist();
         });
