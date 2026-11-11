@@ -478,7 +478,7 @@
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 </div>
                 <div class="input-wrap">
-                    <input type="text" id="query" placeholder="(예: 창1:1, 창1.1, 창1:1-, 은혜)" autofocus autocomplete="off">
+                    <input type="text" id="query" lang="ko" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="(예: 창1:1, 창1.1, 창1:1-, 은혜)" autofocus autocomplete="off">
                     <div id="ghost" class="ghost" aria-hidden="true"><span id="ghost-typed"></span><span id="ghost-tail"></span></div>
                 </div>
                 <button id="clear-btn" class="clear-btn" title="지우기 (Esc)" aria-label="입력 지우기">✕</button>
@@ -490,7 +490,7 @@
                 <button type="button" id="compare-btn" class="compare-btn" onclick="toggleCompare()">📚 역본 비교 ON</button>
                 <button type="button" id="hist-btn" class="compare-btn" onclick="toggleHist()">🕘 히스토리</button>
             </div>
-            <div class="version-badge">1.2.7</div>
+            <div class="version-badge">1.2.8</div>
         </div>
         <div id="hist-panel" class="hist-panel"></div>
 
@@ -1355,6 +1355,78 @@
             if (e.target.closest && (e.target.closest('#hist-panel') || e.target.closest('#hist-btn'))) return;
             closeHist();
         });
+
+        /* ---------- 영문 자판으로 입력해도 한글로 변환 (ckd → 창) ---------- */
+        const KEY2JAMO = {
+            q:'ㅂ',w:'ㅈ',e:'ㄷ',r:'ㄱ',t:'ㅅ',y:'ㅛ',u:'ㅕ',i:'ㅑ',o:'ㅐ',p:'ㅔ',
+            a:'ㅁ',s:'ㄴ',d:'ㅇ',f:'ㄹ',g:'ㅎ',h:'ㅗ',j:'ㅓ',k:'ㅏ',l:'ㅣ',
+            z:'ㅋ',x:'ㅌ',c:'ㅊ',v:'ㅍ',b:'ㅠ',n:'ㅜ',m:'ㅡ',
+            Q:'ㅃ',W:'ㅉ',E:'ㄸ',R:'ㄲ',T:'ㅆ',O:'ㅒ',P:'ㅖ'
+        };
+        const H_CHO = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+        const H_JUNG = ['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ','ㅛ','ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ'];
+        const H_JONG = ['','ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ','ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+        const V_COMBO = { 'ㅗㅏ':'ㅘ','ㅗㅐ':'ㅙ','ㅗㅣ':'ㅚ','ㅜㅓ':'ㅝ','ㅜㅔ':'ㅞ','ㅜㅣ':'ㅟ','ㅡㅣ':'ㅢ' };
+        const C_COMBO = { 'ㄱㅅ':'ㄳ','ㄴㅈ':'ㄵ','ㄴㅎ':'ㄶ','ㄹㄱ':'ㄺ','ㄹㅁ':'ㄻ','ㄹㅂ':'ㄼ','ㄹㅅ':'ㄽ','ㄹㅌ':'ㄾ','ㄹㅍ':'ㄿ','ㄹㅎ':'ㅀ','ㅂㅅ':'ㅄ' };
+        const C_SPLIT = Object.fromEntries(Object.entries(C_COMBO).map(([k, v]) => [v, [k[0], k[1]]]));
+        const isVowelJ = j => H_JUNG.includes(j);
+
+        // 두벌식 자판 기준으로 영문 글자를 한글 글자로 조합
+        function engToKor(str) {
+            let out = '', cho = -1, jung = -1, jong = 0;
+            const flush = () => {
+                if (cho >= 0 && jung >= 0) out += String.fromCharCode(0xAC00 + (cho * 21 + jung) * 28 + jong);
+                else if (cho >= 0) out += H_CHO[cho];
+                else if (jung >= 0) out += H_JUNG[jung];
+                cho = -1; jung = -1; jong = 0;
+            };
+            for (const ch of str) {
+                const j = KEY2JAMO[ch];
+                if (!j) { flush(); out += ch; continue; }
+                if (isVowelJ(j)) {
+                    if (cho < 0 && jung < 0) { out += j; }
+                    else if (jung < 0) { jung = H_JUNG.indexOf(j); }
+                    else if (jong === 0) {
+                        const comb = V_COMBO[H_JUNG[jung] + j];
+                        if (comb) jung = H_JUNG.indexOf(comb);
+                        else { flush(); out += j; }
+                    } else {
+                        const jc = H_JONG[jong];
+                        let keep = 0, moved;
+                        if (C_SPLIT[jc]) { keep = H_JONG.indexOf(C_SPLIT[jc][0]); moved = C_SPLIT[jc][1]; }
+                        else { moved = jc; }
+                        jong = keep; flush();
+                        cho = H_CHO.indexOf(moved); jung = H_JUNG.indexOf(j);
+                    }
+                } else {
+                    if (cho < 0) { cho = H_CHO.indexOf(j); }
+                    else if (jung < 0) { flush(); cho = H_CHO.indexOf(j); }
+                    else if (jong === 0) {
+                        const ji = H_JONG.indexOf(j);
+                        if (ji > 0) jong = ji; else { flush(); cho = H_CHO.indexOf(j); }
+                    } else {
+                        const comb = C_COMBO[H_JONG[jong] + j];
+                        if (comb) jong = H_JONG.indexOf(comb);
+                        else { flush(); cho = H_CHO.indexOf(j); }
+                    }
+                }
+            }
+            flush();
+            return out;
+        }
+
+        // 입력창에 영문이 들어오면 즉시 한글로 바꿈 (캡처 단계라 검색보다 먼저 실행)
+        input.addEventListener('input', (e) => {
+            if (e.isComposing) return;
+            const v = input.value;
+            if (!/[A-Za-z]/.test(v)) return;
+            const k = engToKor(v);
+            if (k !== v) {
+                input.value = k;
+                try { input.setSelectionRange(k.length, k.length); } catch (err) {}
+                updateGhost();
+            }
+        }, true);
 
         /* ---------- 이전에 설치된 서비스 워커/캐시 정리 ---------- */
 
