@@ -490,7 +490,7 @@
                 <button type="button" id="compare-btn" class="compare-btn" onclick="toggleCompare()">📚 역본 비교 ON</button>
                 <button type="button" id="hist-btn" class="compare-btn" onclick="toggleHist()">🕘 히스토리</button>
             </div>
-            <div class="version-badge">1.2.8</div>
+            <div class="version-badge">1.2.7</div>
         </div>
         <div id="hist-panel" class="hist-panel"></div>
 
@@ -1416,12 +1416,18 @@
         }
 
         // 입력창에 영문이 들어오면 즉시 한글로 바꿈 (캡처 단계라 검색보다 먼저 실행)
+        // 한 글자씩 입력해도 조합되도록, 실제로 누른 영문 키(engRaw)를 기억해서 매번 처음부터 다시 조합함
+        let engShown = '', engRaw = '';
         input.addEventListener('input', (e) => {
-            if (e.isComposing) return;
-            const v = input.value;
-            if (!/[A-Za-z]/.test(v)) return;
-            const k = engToKor(v);
-            if (k !== v) {
+            const cur = input.value;
+            if (e.isComposing) { engShown = engRaw = cur; return; }     // 한글 키보드로 입력 중이면 손대지 않음
+            const raw = (engShown && cur !== engShown && cur.startsWith(engShown))
+                ? engRaw + cur.slice(engShown.length)                    // 끝에 새로 입력된 글자만 이어 붙임
+                : cur;                                                    // 지우기/붙여넣기/중간 수정은 현재 값 기준
+            if (!/[A-Za-z]/.test(raw)) { engShown = engRaw = cur; return; }
+            const k = engToKor(raw);
+            engRaw = raw; engShown = k;
+            if (k !== cur) {
                 input.value = k;
                 try { input.setSelectionRange(k.length, k.length); } catch (err) {}
                 updateGhost();
